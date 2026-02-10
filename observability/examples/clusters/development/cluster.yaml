@@ -1,0 +1,11 @@
+apiVersion: observability.company.com/v1alpha1
+kind: ObservabilityCluster
+metadata:
+  name: development
+  namespace: default
+spec:
+  clusterName: development
+  region: <YOUR_AWS_REGION>
+  ampWorkspaceID: <YOUR_AMP_WORKSPACE_ID>
+  ampRemoteWriteEndpoint: https://aps-workspaces.<YOUR_AWS_REGION>.amazonaws.com/workspaces/<YOUR_AMP_WORKSPACE_ID>/api/v1/remote_write
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"

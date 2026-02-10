@@ -1,0 +1,248 @@
+<mxfile host="65bd71144e">
+    <diagram name="Solution Architecture" id="solution-architecture">
+        <mxGraphModel dx="1915" dy="1146" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="GitOps-Driven Multi-Cluster Observability Platform" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#232F3E;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="30" width="800" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="gitops-section" value="GitOps Automation" style="swimlane;whiteSpace=wrap;html=1;fillColor=#E8EAF6;strokeColor=#3F51B5;strokeWidth=2;fontSize=14;fontStyle=1;startSize=35;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="100" width="340" height="680" as="geometry"/>
+                </mxCell>
+                <mxCell id="git-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#DD344C;strokeWidth=2;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="30" y="60" width="280" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="git-icon" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#DD344C;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.source_code;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="140" y="75" width="50" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="git-label" value="Git Repository" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=1;fontColor=#232F3E;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="90" y="130" width="150" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="git-content" value="• ResourceGraph definitions&#xa;• Platform config (YAML)&#xa;• Cluster configs (YAML)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#666666;spacingLeft=20;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="40" y="155" width="260" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="argocd-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;strokeWidth=2;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="30" y="240" width="280" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="argocd-label" value="ArgoCD" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=1;fontColor=#232F3E;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="90" y="305" width="150" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="argocd-content" value="• Watches Git repo&#xa;• Auto-discovers clusters&#xa;• Syncs to Kubernetes" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontColor=#666666;spacingLeft=20;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="40" y="330" width="260" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="kro-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#D79B00;strokeWidth=2;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="30" y="420" width="130" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="kro-label" value="KRO" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#232F3E;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="40" y="475" width="90" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="kro-detail" value="Expands&#xa;ResourceGraphs" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="35" y="495" width="100" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="ack-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;strokeWidth=2;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="180" y="420" width="130" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="ack-label" value="ACK" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#232F3E;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="190" y="475" width="90" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="ack-detail" value="Creates AWS&#xa;resources" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="185" y="495" width="100" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="adot-op-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E6;strokeColor=#D79B00;strokeWidth=2;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="30" y="560" width="280" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="adot-op-label" value="ADOT Operator" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#232F3E;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="100" y="575" width="140" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="adot-op-detail" value="Deploys ADOT Collector DaemonSets&#xa;to all clusters" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;" parent="gitops-section" vertex="1">
+                    <mxGeometry x="40" y="600" width="260" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-git-argo" value="watches" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fontSize=11;strokeColor=#666666;" parent="gitops-section" source="git-box" target="argocd-box" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-argo-kro" value="applies" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fontSize=11;strokeColor=#666666;" parent="gitops-section" source="argocd-box" target="kro-box" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-kro-ack" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#666666;" parent="gitops-section" source="kro-box" target="ack-box" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow-kro-adot" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#D79B00;" parent="gitops-section" source="kro-box" target="adot-op-box" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="95" y="545"/>
+                            <mxPoint x="95" y="545"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="7" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#7B1FA2;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.app_mesh;" vertex="1" parent="gitops-section">
+                    <mxGeometry x="145" y="260" width="40" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="" style="points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;fillColor=#FF6A00;strokeColor=none;shape=mxgraph.alibaba_cloud.ask_ack_container_service_for_kubernetes;" vertex="1" parent="gitops-section">
+                    <mxGeometry x="219.18" y="433.34999999999997" width="31.63" height="36.3" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eks;" vertex="1" parent="gitops-section">
+                    <mxGeometry x="73" y="429.65" width="40" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="aws-section" value="AWS Account" style="swimlane;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#FF6F00;strokeWidth=2;fontSize=14;fontStyle=1;startSize=35;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="100" width="380" height="270" as="geometry"/>
+                </mxCell>
+                <mxCell id="amp-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2E7D32;strokeWidth=2;" parent="aws-section" vertex="1">
+                    <mxGeometry x="30" y="140" width="320" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="amp-icon" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_service_for_prometheus;" parent="aws-section" vertex="1">
+                    <mxGeometry x="50" y="155" width="55" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="amp-label" value="Amazon Managed Prometheus" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;fontColor=#232F3E;" parent="aws-section" vertex="1">
+                    <mxGeometry x="120" y="165" width="220" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="amp-detail" value="• Shared workspace (all clusters)&#xa;• Recording rules &amp; alerts&#xa;• Labeled by cluster_name" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#666666;spacingLeft=10;" parent="aws-section" vertex="1">
+                    <mxGeometry x="120" y="190" width="220" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="iam-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#C62828;strokeWidth=1;" parent="aws-section" vertex="1">
+                    <mxGeometry x="30" y="60" width="320" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="iam-icon" value="🔐" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=30;" parent="aws-section" vertex="1">
+                    <mxGeometry x="57.5" y="67.5" width="40" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="iam-label" value="IAM" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1;fontColor=#232F3E;" parent="aws-section" vertex="1">
+                    <mxGeometry x="90" y="62.5" width="90" height="15" as="geometry"/>
+                </mxCell>
+                <mxCell id="iam-detail" value="Roles, Policies,&#xa;Pod Identity" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#666666;" parent="aws-section" vertex="1">
+                    <mxGeometry x="97.5" y="77.5" width="130" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="clusters-section" value="EKS Clusters (Data Plane)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;strokeWidth=2;fontSize=14;fontStyle=1;startSize=35;" parent="1" vertex="1">
+                    <mxGeometry x="880" y="100" width="460" height="680" as="geometry"/>
+                </mxCell>
+                <mxCell id="cluster1-box" value="production-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;strokeWidth=2;fontSize=12;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="30" y="60" width="400" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="eks1-icon" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eks_cloud;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="50" y="95" width="55" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="workload1" value="Workloads:&#xa;• API Server&#xa;• kubelet&#xa;• Pods" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=10;align=left;spacingLeft=10;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="50" y="160" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="adot1-box" value="ADOT Collector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E6;strokeColor=#D79B00;strokeWidth=2;fontSize=10;fontStyle=1;align=center;verticalAlign=top;spacingTop=3;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="230" y="95" width="180" height="125" as="geometry"/>
+                </mxCell>
+                <mxCell id="adot1-detail" value="DaemonSet&#xa;&#xa;• Scrapes /metrics&#xa;• Adds cluster_name&#xa;• Remote write to AMP&#xa;• SigV4 auth (Pod Identity)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#232F3E;spacingLeft=10;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="235" y="120" width="170" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="cluster2-box" value="production-2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;strokeWidth=2;fontSize=12;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="30" y="270" width="400" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="eks2-icon" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eks_cloud;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="50" y="305" width="55" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="workload2" value="Workloads" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=10;align=center;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="50" y="370" width="140" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="adot2-box" value="ADOT Collector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E6;strokeColor=#D79B00;strokeWidth=2;fontSize=10;fontStyle=1;align=center;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="230" y="305" width="180" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="cluster3-box" value="staging-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;strokeWidth=2;fontSize=12;fontStyle=1;align=center;verticalAlign=top;spacingTop=5;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="30" y="430" width="400" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="eks3-icon" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eks_cloud;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="50" y="465" width="55" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="workload3" value="Workloads" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=10;align=center;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="50" y="530" width="140" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="adot3-box" value="ADOT Collector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E6;strokeColor=#D79B00;strokeWidth=2;fontSize=10;fontStyle=1;align=center;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="230" y="465" width="180" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="new-cluster-note" value="➕ Add new cluster = Create directory + git push&#xa;ArgoCD auto-deploys in ~5 minutes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9E6;strokeColor=#F57C00;strokeWidth=1;fontSize=10;align=center;fontStyle=2;" parent="clusters-section" vertex="1">
+                    <mxGeometry x="30" y="590" width="400" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="scrape1" value="scrape" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fontSize=9;strokeColor=#999999;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" parent="clusters-section" source="workload1" target="adot1-box" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="scrape" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fontSize=9;strokeColor=#999999;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="clusters-section" source="workload2" target="adot2-box">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="200" y="248" as="sourcePoint"/>
+                        <mxPoint x="240" y="216" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="6" value="scrape" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;fontSize=9;strokeColor=#999999;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=-0.011;entryY=0.4;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="clusters-section" source="workload3" target="adot3-box">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="130" y="380" as="sourcePoint"/>
+                        <mxPoint x="240" y="358" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="arrow-ack-aws" value="creates" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fontSize=11;strokeColor=#1976D2;dashed=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="ack-box" target="amp-box" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="425" y="575"/>
+                            <mxPoint x="425" y="295"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="arrow-cluster2-amp" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;fontSize=10;strokeColor=#FF6B35;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" target="amp-box" edge="1">
+                    <mxGeometry x="0.0673" y="88" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="850" y="418"/>
+                            <mxPoint x="850" y="295"/>
+                        </Array>
+                        <mxPoint x="911" y="418" as="sourcePoint"/>
+                        <mxPoint x="38" y="73" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="arrow-cluster3-amp" value="remote_write&lt;br&gt;cluster_name=#" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;fontSize=10;strokeColor=#FF6B35;entryX=1;entryY=0.75;entryDx=0;entryDy=0;exitX=-0.007;exitY=0.4;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="cluster3-box" target="amp-box" edge="1">
+                    <mxGeometry x="-0.432" y="10" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="907" y="580"/>
+                            <mxPoint x="850" y="580"/>
+                            <mxPoint x="850" y="323"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                        <mxPoint x="880" y="578" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="arrow-amp-amg" value="queries" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;fontSize=11;strokeColor=#0288D1;" parent="1" source="amp-box" target="amg-box" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="key-banner" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE082;strokeColor=#F57C00;strokeWidth=2;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="810" width="1280" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="key-title" value="🎯 Architecture Highlights" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;fontColor=#232F3E;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="820" width="250" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="key-points" value="✓ GitOps-Driven: All infrastructure changes via Git commits | ✓ Self-Service: Developers add clusters by creating directories | ✓ Centralized: Single AMP workspace for all clusters&lt;br&gt;✓ AWS-Managed: ArgoCD + KRO + ACK eliminate controller maintenance | ✓ Fast: New cluster observability in ~5 minutes | ✓ Scalable: Pattern works for 10s to 100s of clusters" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#232F3E;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="845" width="1240" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="deploys to" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;fontSize=11;strokeColor=#D79B00;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1">
+                    <mxGeometry x="-0.2" relative="1" as="geometry">
+                        <mxPoint x="880" y="705" as="targetPoint"/>
+                        <mxPoint as="offset"/>
+                        <mxPoint x="370" y="705" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="amg-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0288D1;strokeWidth=1;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="415" width="320" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="amg-label" value="AMG" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1;fontColor=#232F3E;" parent="1" vertex="1">
+                    <mxGeometry x="580" y="431" width="90" height="15" as="geometry"/>
+                </mxCell>
+                <mxCell id="amg-detail" value="Dashboards&#xa;(unified view)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="570" y="451" width="130" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.managed_service_for_grafana;" vertex="1" parent="1">
+                    <mxGeometry x="516" y="432" width="38" height="38" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;fontSize=10;strokeColor=#FF6B35;entryX=1;entryY=0.25;entryDx=0;entryDy=0;exitX=0;exitY=0.75;exitDx=0;exitDy=0;" edge="1" parent="1" source="cluster1-box" target="amp-box">
+                    <mxGeometry x="0.0673" y="88" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="850" y="295"/>
+                            <mxPoint x="850" y="268"/>
+                        </Array>
+                        <mxPoint x="921" y="428" as="sourcePoint"/>
+                        <mxPoint x="810" y="305" as="targetPoint"/>
+                        <mxPoint x="38" y="73" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

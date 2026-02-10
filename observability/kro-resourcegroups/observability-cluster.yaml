@@ -1,0 +1,288 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: observability-cluster
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: ObservabilityCluster
+    group: observability.company.com
+    spec:
+      clusterName: string | required=true
+      region: string | required=true
+      ampWorkspaceID: string | required=true
+      ampRemoteWriteEndpoint: string | required=true
+      accountID: string | required=true
+  resources:
+    # ServiceAccount - No IRSA annotations (using Pod Identity instead)
+    - id: adotServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: adot-collector
+          namespace: observability-system
+    
+    # IAM Policy - Permissions for ADOT Collector to write to AMP
+    - id: adotIAMPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: adot-collector-amp-policy
+          namespace: observability-system
+        spec:
+          name: ADOTCollectorAMPPolicy
+          description: "IAM policy for ADOT Collector to write metrics to AMP"
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "aps:RemoteWrite",
+                    "aps:GetSeries",
+                    "aps:GetLabels",
+                    "aps:GetMetricMetadata"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+    
+    # IAM Role - With Pod Identity trust policy
+    - id: adotIAMRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: adot-collector-role
+          namespace: observability-system
+        spec:
+          name: ADOTCollectorRole
+          description: "IAM role for ADOT Collector with AMP write permissions"
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": "pods.eks.amazonaws.com"
+                  },
+                  "Action": [
+                    "sts:AssumeRole",
+                    "sts:TagSession"
+                  ]
+                }
+              ]
+            }
+          policies:
+            - "arn:aws:iam::{{ .spec.accountID }}:policy/ADOTCollectorAMPPolicy"
+    
+    # Pod Identity Association - Links ServiceAccount to IAM Role
+    - id: adotPodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: adot-collector-pod-identity
+          namespace: observability-system
+        spec:
+          clusterName: "{{ .spec.clusterName }}"
+          namespace: observability-system
+          serviceAccount: adot-collector
+          roleARN: "arn:aws:iam::{{ .spec.accountID }}:role/ADOTCollectorRole"
+    
+    # EKS Addon - ADOT operator
+    - id: adotAddon
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: Addon
+        metadata:
+          name: adot-addon
+          namespace: observability-system
+        spec:
+          name: adot
+          clusterName: "{{ .spec.clusterName }}"
+          resolveConflicts: OVERWRITE
+    
+    # ClusterRole - RBAC permissions for ADOT Collector
+    - id: adotClusterRole
+      template:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          name: adot-collector
+        rules:
+          - apiGroups: [""]
+            resources:
+              - nodes
+              - nodes/proxy
+              - services
+              - endpoints
+              - pods
+            verbs: ["get", "list", "watch"]
+          - apiGroups: ["extensions"]
+            resources:
+              - ingresses
+            verbs: ["get", "list", "watch"]
+          - nonResourceURLs: ["/metrics"]
+            verbs: ["get"]
+    
+    # ClusterRoleBinding - Binds ClusterRole to ServiceAccount
+    - id: adotClusterRoleBinding
+      template:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRoleBinding
+        metadata:
+          name: adot-collector
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: ClusterRole
+          name: adot-collector
+        subjects:
+          - kind: ServiceAccount
+            name: adot-collector
+            namespace: observability-system
+    
+    # OpenTelemetryCollector - v1beta1 with inline config using environment variables
+    - id: adotCollector
+      template:
+        apiVersion: opentelemetry.io/v1beta1
+        kind: OpenTelemetryCollector
+        metadata:
+          name: adot-collector
+          namespace: observability-system
+        spec:
+          mode: daemonset
+          serviceAccount: adot-collector
+          image: public.ecr.aws/aws-observability/aws-otel-collector:latest
+          config:
+            receivers:
+              prometheus:
+                config:
+                  global:
+                    scrape_interval: 30s
+                    scrape_timeout: 10s
+                  scrape_configs:
+                    # Kubernetes API Server
+                    - job_name: 'kubernetes-apiservers'
+                      kubernetes_sd_configs:
+                        - role: endpoints
+                      scheme: https
+                      tls_config:
+                        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+                      relabel_configs:
+                        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+                          action: keep
+                          regex: default;kubernetes;https
+                        - action: replace
+                          source_labels: [__meta_kubernetes_namespace]
+                          target_label: kubernetes_namespace
+                        - action: replace
+                          source_labels: [__meta_kubernetes_service_name]
+                          target_label: kubernetes_name
+                    
+                    # Kubernetes Nodes
+                    - job_name: 'kubernetes-nodes'
+                      kubernetes_sd_configs:
+                        - role: node
+                      scheme: https
+                      tls_config:
+                        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+                      relabel_configs:
+                        - action: labelmap
+                          regex: __meta_kubernetes_node_label_(.+)
+                        - target_label: __address__
+                          replacement: "kubernetes.default.svc:443"
+                        - source_labels: [__meta_kubernetes_node_name]
+                          regex: (.+)
+                          target_label: __metrics_path__
+                          replacement: "/api/v1/nodes/${1}/proxy/metrics"
+                    
+                    # Kubernetes Pods
+                    - job_name: 'kubernetes-pods'
+                      kubernetes_sd_configs:
+                        - role: pod
+                      relabel_configs:
+                        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                          action: keep
+                          regex: true
+                        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+                          action: replace
+                          target_label: __metrics_path__
+                          regex: (.+)
+                        - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                          action: replace
+                          regex: ([^:]+)(?::\d+)?;(\d+)
+                          replacement: "$1:$2"
+                          target_label: __address__
+                        - action: labelmap
+                          regex: __meta_kubernetes_pod_label_(.+)
+                        - source_labels: [__meta_kubernetes_namespace]
+                          action: replace
+                          target_label: kubernetes_namespace
+                        - source_labels: [__meta_kubernetes_pod_name]
+                          action: replace
+                          target_label: kubernetes_pod_name
+                    
+                    # cAdvisor (container metrics)
+                    - job_name: 'kubernetes-cadvisor'
+                      kubernetes_sd_configs:
+                        - role: node
+                      scheme: https
+                      tls_config:
+                        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+                      relabel_configs:
+                        - action: labelmap
+                          regex: __meta_kubernetes_node_label_(.+)
+                        - target_label: __address__
+                          replacement: "kubernetes.default.svc:443"
+                        - source_labels: [__meta_kubernetes_node_name]
+                          regex: (.+)
+                          target_label: __metrics_path__
+                          replacement: "/api/v1/nodes/${1}/proxy/metrics/cadvisor"
+            
+            processors:
+              batch:
+                timeout: 60s
+                send_batch_size: 1000
+              
+              resource:
+                attributes:
+                  - key: cluster_name
+                    value: "{{ .spec.clusterName }}"
+                    action: upsert
+            
+            exporters:
+              prometheusremotewrite:
+                endpoint: "{{ .spec.ampRemoteWriteEndpoint }}"
+                auth:
+                  authenticator: sigv4auth
+                resource_to_telemetry_conversion:
+                  enabled: true
+            
+            extensions:
+              sigv4auth:
+                region: "{{ .spec.region }}"
+                service: aps
+            
+            service:
+              extensions: [sigv4auth]
+              pipelines:
+                metrics:
+                  receivers: [prometheus]
+                  processors: [batch, resource]
+                  exporters: [prometheusremotewrite]
+          env:
+            - name: CLUSTER_NAME
+              value: "{{ .spec.clusterName }}"
+            - name: AWS_REGION
+              value: "{{ .spec.region }}"
+            - name: AMP_REMOTE_WRITE_ENDPOINT
+              value: "{{ .spec.ampRemoteWriteEndpoint }}"
