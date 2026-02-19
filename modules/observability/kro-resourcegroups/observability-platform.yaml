@@ -1,0 +1,119 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: observability-platform
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: ObservabilityPlatform
+    group: observability.company.com
+    spec:
+      workspaceName: string | required=true
+      region: string | required=true
+  resources:
+    # AMP Workspace - Shared metrics data store
+    - id: ampWorkspace
+      template:
+        apiVersion: prometheusservice.services.k8s.aws/v1alpha1
+        kind: Workspace
+        metadata:
+          name: ${schema.spec.workspaceName}
+          namespace: observability-system
+        spec:
+          alias: ${schema.spec.workspaceName}
+          tags:
+            managed-by: "kro"
+            purpose: "multi-cluster-observability"
+            environment: "production"
+    
+    # Cross-Cluster Recording Rules - Aggregations across all clusters
+    - id: crossClusterRecordingRules
+      template:
+        apiVersion: prometheusservice.services.k8s.aws/v1alpha1
+        kind: RuleGroupsNamespace
+        metadata:
+          name: cross-cluster-recording-rules
+          namespace: observability-system
+        spec:
+          name: cross-cluster-rules
+          workspaceRef:
+            from:
+              name: ${schema.spec.workspaceName}
+          configuration: |
+            groups:
+              - name: cross-cluster-aggregations
+                interval: 30s
+                rules:
+                  # Total across ALL clusters
+                  - record: total_clusters:cpu_usage:rate5m
+                    expr: sum(rate(container_cpu_usage_seconds_total[5m]))
+                  
+                  - record: total_clusters:memory_usage:bytes
+                    expr: sum(container_memory_working_set_bytes)
+                  
+                  # Per-cluster aggregations (for multi-cluster dashboard)
+                  - record: cluster:cpu_usage:rate5m
+                    expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (cluster_name)
+                  
+                  - record: cluster:memory_usage:bytes
+                    expr: sum(container_memory_working_set_bytes) by (cluster_name)
+                  
+                  # Node-level aggregations
+                  - record: node:cpu_usage:rate5m
+                    expr: sum(rate(node_cpu_seconds_total{mode!="idle"}[5m])) by (instance)
+                  
+                  - record: node:memory_usage:bytes
+                    expr: node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes
+    
+    # Critical Platform Alerts - Multi-cluster health monitoring
+    - id: platformAlertRules
+      template:
+        apiVersion: prometheusservice.services.k8s.aws/v1alpha1
+        kind: RuleGroupsNamespace
+        metadata:
+          name: platform-alert-rules
+          namespace: observability-system
+        spec:
+          name: platform-alerts
+          workspaceRef:
+            from:
+              name: ${schema.spec.workspaceName}
+          configuration: |
+            groups:
+              - name: platform-critical-alerts
+                rules:
+                  - alert: ClusterCompletelyDown
+                    expr: up{job="kubernetes-apiservers"} == 0
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Cluster {{ $labels.cluster_name }} is completely unreachable"
+                      description: "The Kubernetes API server for cluster {{ $labels.cluster_name }} has been unreachable for 5 minutes."
+                  
+                  - alert: MultipleClustersDegraded
+                    expr: count(up{job="kubernetes-apiservers"} == 0) > 2
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Multiple clusters are experiencing issues"
+                      description: "More than 2 clusters have unreachable API servers, indicating a potential platform-wide issue."
+                  
+                  - alert: HighNodeMemoryUsage
+                    expr: (node:memory_usage:bytes / node_memory_MemTotal_bytes) > 0.85
+                    for: 10m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "High memory usage on node {{ $labels.instance }}"
+                      description: "Node {{ $labels.instance }} has been using more than 85% of its memory for 10 minutes."
+                  
+                  - alert: HighNodeCPUUsage
+                    expr: node:cpu_usage:rate5m > 0.90
+                    for: 10m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "High CPU usage on node {{ $labels.instance }}"
+                      description: "Node {{ $labels.instance }} has been using more than 90% CPU for 10 minutes."

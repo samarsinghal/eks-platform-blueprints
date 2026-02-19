@@ -1,0 +1,290 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: github-runner
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: GitHubRunner
+    group: cicd.company.com
+    spec:
+      # GitHub Configuration
+      githubOrg: string | required=true
+      githubScope: string | default="organization"  # organization or repository
+      githubRepo: string  # Required if scope=repository
+      runnerScaleSetName: string | required=true
+
+      # Cluster Configuration
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+
+      # Runner Configuration
+      minRunners: integer | default=0
+      maxRunners: integer | default=10
+      runnerGroup: string | default="default"
+      runnerLabels: string | default="self-hosted,linux,x64"
+
+      # AWS Access Configuration
+      awsPolicyArns: string  # Comma-separated list of IAM policy ARNs for workflow access
+
+      # Resource Configuration
+      cpuRequest: string | default="500m"
+      memoryRequest: string | default="1Gi"
+      cpuLimit: string | default="2000m"
+      memoryLimit: string | default="4Gi"
+
+      # Security
+      secretsPrefix: string | default="github-runner"
+
+  resources:
+    # Namespace
+    - id: runnerNamespace
+      template:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: github-runner-system
+          labels:
+            app.kubernetes.io/name: github-runner
+            app.kubernetes.io/managed-by: kro
+
+    # IAM Policy for GitHub Runner workflows
+    - id: runnerIAMPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: "{{ .spec.runnerScaleSetName }}-workflow-policy"
+          namespace: github-runner-system
+        spec:
+          name: "${schema.spec.clusterName}-{{ .spec.runnerScaleSetName }}-workflow-policy"
+          description: "IAM policy for GitHub Actions workflows running in {{ .spec.runnerScaleSetName }}"
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "eks:DescribeCluster",
+                    "eks:ListClusters"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:DescribeSecret"
+                  ],
+                  "Resource": "arn:aws:secretsmanager:${schema.spec.region}:${schema.spec.accountID}:secret:{{ .spec.secretsPrefix }}/*"
+                }
+              ]
+            }
+
+    # IAM Role for GitHub Runner workflows
+    - id: runnerIAMRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: "{{ .spec.runnerScaleSetName }}-workflow-role"
+          namespace: github-runner-system
+        spec:
+          name: "${schema.spec.clusterName}-{{ .spec.runnerScaleSetName }}-workflow-role"
+          description: "IAM role for GitHub Actions workflows in {{ .spec.runnerScaleSetName }}"
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": "pods.eks.amazonaws.com"
+                  },
+                  "Action": [
+                    "sts:AssumeRole",
+                    "sts:TagSession"
+                  ]
+                }
+              ]
+            }
+          policies:
+            - "$resource: runnerIAMPolicy.status.arn"
+
+    # Pod Identity Association
+    - id: runnerPodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: "{{ .spec.runnerScaleSetName }}-pod-identity"
+          namespace: github-runner-system
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: github-runner-system
+          serviceAccount: "{{ .spec.runnerScaleSetName }}-sa"
+          roleARN: "$resource: runnerIAMRole.status.ackResourceMetadata.arn"
+
+    # ServiceAccount for GitHub Runners
+    - id: runnerServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: "{{ .spec.runnerScaleSetName }}-sa"
+          namespace: github-runner-system
+          annotations:
+            eks.amazonaws.com/role-arn: "$resource: runnerIAMRole.status.ackResourceMetadata.arn"
+
+    # Secret Provider Class for GitHub PAT
+    - id: githubSecretProviderClass
+      template:
+        apiVersion: secrets-store.csi.x-k8s.io/v1
+        kind: SecretProviderClass
+        metadata:
+          name: "{{ .spec.runnerScaleSetName }}-github-secrets"
+          namespace: github-runner-system
+        spec:
+          provider: aws
+          parameters:
+            objects: |
+              - objectName: "{{ .spec.secretsPrefix }}/github-pat"
+                objectType: "secretsmanager"
+                objectAlias: "github-pat"
+          secretObjects:
+            - secretName: "{{ .spec.runnerScaleSetName }}-github-pat"
+              type: Opaque
+              data:
+                - objectName: github-pat
+                  key: github_token
+
+    # ConfigMap for Runner Configuration
+    - id: runnerConfigMap
+      template:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: "{{ .spec.runnerScaleSetName }}-config"
+          namespace: github-runner-system
+        data:
+          GITHUB_ORG: "${schema.spec.githubOrg}"
+          RUNNER_SCOPE: "${schema.spec.githubScope}"
+          RUNNER_GROUP: "{{ .spec.runnerGroup }}"
+          RUNNER_LABELS: "{{ .spec.runnerLabels }}"
+
+    # AutoscalingRunnerSet (GitHub Actions Runner Controller CRD)
+    - id: runnerScaleSet
+      template:
+        apiVersion: actions.github.com/v1alpha1
+        kind: AutoscalingRunnerSet
+        metadata:
+          name: ${schema.spec.runnerScaleSetName}
+          namespace: github-runner-system
+        spec:
+          githubConfigUrl: "https://github.com/${schema.spec.githubOrg}{{ if eq .spec.githubScope \"repository\" }}/${schema.spec.githubRepo}{{ end }}"
+          githubConfigSecret: "{{ .spec.runnerScaleSetName }}-github-pat"
+          minRunners: 0
+          maxRunners: 10
+          runnerGroup: "{{ .spec.runnerGroup }}"
+          runnerScaleSetName: ${schema.spec.runnerScaleSetName}
+          template:
+            spec:
+              serviceAccountName: "{{ .spec.runnerScaleSetName }}-sa"
+              containers:
+                - name: runner
+                  image: ghcr.io/actions/actions-runner:latest
+                  env:
+                    - name: RUNNER_LABELS
+                      valueFrom:
+                        configMapKeyRef:
+                          name: "{{ .spec.runnerScaleSetName }}-config"
+                          key: RUNNER_LABELS
+                  resources:
+                    requests:
+                      cpu: ${schema.spec.cpuRequest}
+                      memory: ${schema.spec.memoryRequest}
+                    limits:
+                      cpu: ${schema.spec.cpuLimit}
+                      memory: ${schema.spec.memoryLimit}
+                  volumeMounts:
+                    - name: github-secrets
+                      mountPath: /secrets
+                      readOnly: true
+              volumes:
+                - name: github-secrets
+                  csi:
+                    driver: secrets-store.csi.k8s.io
+                    readOnly: true
+                    volumeAttributes:
+                      secretProviderClass: "{{ .spec.runnerScaleSetName }}-github-secrets"
+
+    # NetworkPolicy for Runners
+    - id: runnerNetworkPolicy
+      template:
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
+        metadata:
+          name: "{{ .spec.runnerScaleSetName }}-netpol"
+          namespace: github-runner-system
+        spec:
+          podSelector:
+            matchLabels:
+              actions.github.com/scale-set-name: ${schema.spec.runnerScaleSetName}
+          policyTypes:
+            - Ingress
+            - Egress
+          egress:
+            # Allow DNS
+            - to:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: kube-system
+              ports:
+                - protocol: UDP
+                  port: 53
+            # Allow HTTPS to GitHub
+            - to:
+                - namespaceSelector: {}
+              ports:
+                - protocol: TCP
+                  port: 443
+            # Allow AWS APIs
+            - to:
+                - namespaceSelector: {}
+              ports:
+                - protocol: TCP
+                  port: 443
+          ingress: []
+
+    # ResourceQuota for Runner Namespace
+    - id: runnerResourceQuota
+      template:
+        apiVersion: v1
+        kind: ResourceQuota
+        metadata:
+          name: github-runner-quota
+          namespace: github-runner-system
+        spec:
+          hard:
+            requests.cpu: "100"
+            requests.memory: "100Gi"
+            limits.cpu: "200"
+            limits.memory: "200Gi"
+            persistentvolumeclaims: "10"
+
+    # PodDisruptionBudget
+    - id: runnerPDB
+      template:
+        apiVersion: policy/v1
+        kind: PodDisruptionBudget
+        metadata:
+          name: "{{ .spec.runnerScaleSetName }}-pdb"
+          namespace: github-runner-system
+        spec:
+          minAvailable: 1
+          selector:
+            matchLabels:
+              actions.github.com/scale-set-name: ${schema.spec.runnerScaleSetName}
+

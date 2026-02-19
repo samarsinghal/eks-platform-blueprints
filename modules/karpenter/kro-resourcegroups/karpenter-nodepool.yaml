@@ -1,0 +1,58 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: karpenter-nodepool
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: KarpenterNodePool
+    group: karpenter.company.com
+    spec:
+      # Core Configuration
+      nodePoolName: string | required=true
+      clusterName: string | required=true
+
+      # Instance Configuration
+      capacityType: string | default="spot"  # spot, on-demand
+      architecture: string | default="amd64"  # amd64, arm64
+      cpuLimit: string | default="1000"
+      memoryLimit: string | default="1000Gi"
+
+      # Disruption
+      consolidationPolicy: string | default="WhenEmptyOrUnderutilized"  # WhenEmpty, WhenEmptyOrUnderutilized
+      expireAfter: string | default="720h"
+
+  resources:
+    # NodePool - EKS Auto Mode manages EC2NodeClass/IAM/NTH automatically
+    - id: karpenterNodePool
+      template:
+        apiVersion: karpenter.sh/v1
+        kind: NodePool
+        metadata:
+          name: ${schema.spec.nodePoolName}
+        spec:
+          template:
+            metadata:
+              labels:
+                nodepool: ${schema.spec.nodePoolName}
+            spec:
+              requirements:
+                - key: karpenter.sh/capacity-type
+                  operator: In
+                  values:
+                    - ${schema.spec.capacityType}
+                - key: kubernetes.io/arch
+                  operator: In
+                  values:
+                    - ${schema.spec.architecture}
+              nodeClassRef:
+                group: eks.amazonaws.com
+                kind: NodeClass
+                name: default
+          limits:
+            cpu: ${schema.spec.cpuLimit}
+            memory: ${schema.spec.memoryLimit}
+          disruption:
+            consolidationPolicy: ${schema.spec.consolidationPolicy}
+            budgets:
+              - nodes: "10%"

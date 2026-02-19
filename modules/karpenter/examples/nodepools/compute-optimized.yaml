@@ -1,0 +1,11 @@
+apiVersion: karpenter.company.com/v1alpha1
+kind: KarpenterNodePool
+metadata:
+  name: compute-optimized
+spec:
+  nodePoolName: compute-optimized
+  clusterName: <YOUR_CLUSTER_NAME>
+  capacityType: spot
+  architecture: amd64
+  cpuLimit: "300"
+  memoryLimit: "600Gi"

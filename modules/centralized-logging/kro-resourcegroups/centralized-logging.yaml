@@ -1,0 +1,232 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: centralized-logging
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: CentralizedLogging
+    group: logging.company.com
+    spec:
+      # Cluster Configuration
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+
+      # Logging Configuration
+      loggingNamespace: string | default="amazon-cloudwatch"
+      logDestination: string | default="cloudwatch"  # cloudwatch, s3, or both
+      cloudWatchLogGroup: string  # Auto-generated if empty
+      s3BucketName: string  # Required if logDestination includes s3
+
+      # Log Types
+      enableApplicationLogs: boolean | default=true
+      enableSystemLogs: boolean | default=true
+      enableAuditLogs: boolean | default=false
+
+      # Retention
+      logRetentionDays: integer | default=7
+
+      # Resource Configuration
+      cpuRequest: string | default="100m"
+      memoryRequest: string | default="128Mi"
+      cpuLimit: string | default="500m"
+      memoryLimit: string | default="512Mi"
+
+  resources:
+    # Namespace
+    - id: loggingNamespace
+      template:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: "{{ .spec.loggingNamespace }}"
+          labels:
+            app.kubernetes.io/name: fluent-bit
+
+    # ServiceAccount
+    - id: fluentBitServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: fluent-bit
+          namespace: "{{ .spec.loggingNamespace }}"
+
+    # IAM Policy
+    - id: fluentBitIAMPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: fluent-bit-policy
+          namespace: "{{ .spec.loggingNamespace }}"
+        spec:
+          name: "${schema.spec.clusterName}-fluent-bit-policy"
+          description: "IAM policy for Fluent Bit logging"
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogGroups",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": "arn:aws:logs:${schema.spec.region}:${schema.spec.accountID}:log-group:*"
+                }{{ if eq .spec.logDestination "s3" }},
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:PutObject",
+                    "s3:GetObject",
+                    "s3:ListBucket"
+                  ],
+                  "Resource": [
+                    "arn:aws:s3:::${schema.spec.s3BucketName}",
+                    "arn:aws:s3:::${schema.spec.s3BucketName}/*"
+                  ]
+                }{{ end }}
+              ]
+            }
+
+    # IAM Role
+    - id: fluentBitIAMRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: fluent-bit-role
+          namespace: "{{ .spec.loggingNamespace }}"
+        spec:
+          name: "${schema.spec.clusterName}-fluent-bit-role"
+          description: "IAM role for Fluent Bit"
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": "pods.eks.amazonaws.com"
+                  },
+                  "Action": ["sts:AssumeRole", "sts:TagSession"]
+                }
+              ]
+            }
+          policies:
+            - "$resource: fluentBitIAMPolicy.status.arn"
+
+    # Pod Identity
+    - id: fluentBitPodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: fluent-bit-identity
+          namespace: "{{ .spec.loggingNamespace }}"
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: "{{ .spec.loggingNamespace }}"
+          serviceAccount: fluent-bit
+          roleARN: "$resource: fluentBitIAMRole.status.ackResourceMetadata.arn"
+
+    # ConfigMap
+    - id: fluentBitConfigMap
+      template:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: fluent-bit-config
+          namespace: "{{ .spec.loggingNamespace }}"
+        data:
+          fluent-bit.conf: |
+            [SERVICE]
+                Flush         5
+                Log_Level     info
+                Daemon        off
+                Parsers_File  parsers.conf
+
+            [INPUT]
+                Name              tail
+                Path              /var/log/containers/*.log
+                multiline.parser  docker, cri
+                Tag               kube.*
+                Mem_Buf_Limit     50MB
+                Skip_Long_Lines   On
+
+            [FILTER]
+                Name                kubernetes
+                Match               kube.*
+                Kube_URL            https://kubernetes.default.svc:443
+                Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+                Merge_Log           On
+                Keep_Log            Off
+                K8S-Logging.Parser  On
+                K8S-Logging.Exclude On
+
+            [OUTPUT]
+                Name                cloudwatch_logs
+                Match               *
+                region              ${schema.spec.region}
+                log_group_name      {{ if .spec.cloudWatchLogGroup }}{{ .spec.cloudWatchLogGroup }}{{ else }}/aws/eks/${schema.spec.clusterName}/logs{{ end }}
+                log_stream_prefix   eks-
+                auto_create_group   true
+                retention_in_days   ${string(schema.spec.logRetentionDays)}
+
+    # DaemonSet
+    - id: fluentBitDaemonSet
+      template:
+        apiVersion: apps/v1
+        kind: DaemonSet
+        metadata:
+          name: fluent-bit
+          namespace: "{{ .spec.loggingNamespace }}"
+          labels:
+            app.kubernetes.io/name: fluent-bit
+        spec:
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: fluent-bit
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: fluent-bit
+            spec:
+              serviceAccountName: fluent-bit
+              containers:
+                - name: fluent-bit
+                  image: public.ecr.aws/aws-observability/aws-for-fluent-bit:2.31.12
+                  volumeMounts:
+                    - name: varlog
+                      mountPath: /var/log
+                      readOnly: true
+                    - name: varlibdockercontainers
+                      mountPath: /var/lib/docker/containers
+                      readOnly: true
+                    - name: fluent-bit-config
+                      mountPath: /fluent-bit/etc/
+                  resources:
+                    requests:
+                      cpu: ${schema.spec.cpuRequest}
+                      memory: ${schema.spec.memoryRequest}
+                    limits:
+                      cpu: ${schema.spec.cpuLimit}
+                      memory: ${schema.spec.memoryLimit}
+              volumes:
+                - name: varlog
+                  hostPath:
+                    path: /var/log
+                - name: varlibdockercontainers
+                  hostPath:
+                    path: /var/lib/docker/containers
+                - name: fluent-bit-config
+                  configMap:
+                    name: fluent-bit-config
+              tolerations:
+                - operator: Exists

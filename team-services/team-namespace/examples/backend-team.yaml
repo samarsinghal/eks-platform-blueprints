@@ -1,0 +1,31 @@
+apiVersion: platform.company.com/v1alpha1
+kind: TeamNamespace
+metadata:
+  name: backend-team
+spec:
+  # Core configuration (REQUIRED - update these values)
+  teamName: backend
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  environment: production
+
+  # RBAC configuration
+  rbacProfile: developer
+  adminUsers: "<ADMIN_USER_1>,<ADMIN_USER_2>"
+  developerUsers: "<DEV_USER_1>,<DEV_USER_2>,<DEV_USER_3>"
+  viewerUsers: "<VIEWER_USER_1>"
+
+  # Resource quotas
+  cpuQuota: "20"
+  memoryQuota: "40Gi"
+  storageQuota: "200Gi"
+  podQuota: "100"
+
+  # Secrets access
+  secretsPrefix: "backend/"
+  enableSecretsAccess: true
+
+  # AWS service access
+  enableAWSAccess: true
+  awsServices: "s3,dynamodb"

@@ -1,0 +1,10 @@
+apiVersion: platform.company.com/v1alpha1
+kind: CostVisibility
+metadata:
+  name: cluster-costs
+spec:
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  enableSplitCostAllocation: true
+  costAllocationTags: "team,environment,cost-center"

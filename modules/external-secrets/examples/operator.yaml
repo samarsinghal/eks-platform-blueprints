@@ -1,0 +1,25 @@
+apiVersion: secrets.company.com/v1alpha1
+kind: ExternalSecretsOperator
+metadata:
+  name: external-secrets
+  namespace: default
+spec:
+  # Cluster Configuration
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: <YOUR_AWS_ACCOUNT_ID>
+
+  # Operator Configuration
+  operatorNamespace: external-secrets-system
+  syncInterval: 1h
+
+  # AWS Backend Configuration
+  secretsPrefix: eks/production
+  enableSecretsManager: true
+  enableParameterStore: false
+
+  # Resource Configuration
+  cpuRequest: "100m"
+  memoryRequest: "128Mi"
+  cpuLimit: "500m"
+  memoryLimit: "512Mi"

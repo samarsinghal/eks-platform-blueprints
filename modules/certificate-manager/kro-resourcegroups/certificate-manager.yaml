@@ -1,0 +1,89 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: certificate-manager
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: CertificateManager
+    group: platform.company.com
+    spec:
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+      email: string | required=true  # For Let's Encrypt notifications
+      hostedZoneID: string | default=""  # For DNS01 solver
+
+  resources:
+    - id: certManagerIAMPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.clusterName}-cert-manager-policy
+          namespace: cert-manager
+        spec:
+          name: ${schema.spec.clusterName}-CertManagerPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["route53:GetChange","route53:ChangeResourceRecordSets","route53:ListResourceRecordSets"],
+                  "Resource": ["arn:aws:route53:::hostedzone/*","arn:aws:route53:::change/*"]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["route53:ListHostedZones","route53:ListHostedZonesByName"],
+                  "Resource": "*"
+                }
+              ]
+            }
+
+    - id: certManagerIAMRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.clusterName}-cert-manager-role
+          namespace: cert-manager
+        spec:
+          name: ${schema.spec.clusterName}-CertManagerRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "pods.eks.amazonaws.com"},
+                "Action": ["sts:AssumeRole", "sts:TagSession"]
+              }]
+            }
+
+    - id: certManagerPodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: ${schema.spec.clusterName}-cert-manager
+          namespace: cert-manager
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: cert-manager
+          serviceAccount: cert-manager
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.clusterName}-CertManagerRole
+
+    - id: letsencryptIssuer
+      template:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: cluster-issuer-config
+          namespace: cert-manager
+          labels:
+            app.kubernetes.io/name: cert-manager
+        data:
+          clusterName: ${schema.spec.clusterName}
+          email: ${schema.spec.email}
+          hostedZoneID: ${schema.spec.hostedZoneID}
+          region: ${schema.spec.region}

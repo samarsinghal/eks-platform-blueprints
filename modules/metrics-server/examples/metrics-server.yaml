@@ -1,0 +1,18 @@
+apiVersion: metrics.company.com/v1alpha1
+kind: MetricsServer
+metadata:
+  name: cluster-metrics-server
+  namespace: default
+spec:
+  # Configuration
+  namespace: kube-system
+  replicas: 2
+
+  # Resource Configuration
+  cpuRequest: "100m"
+  memoryRequest: "200Mi"
+  cpuLimit: "500m"
+  memoryLimit: "1Gi"
+
+  # High Availability
+  enablePDB: true

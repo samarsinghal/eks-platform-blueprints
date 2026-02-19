@@ -1,0 +1,60 @@
+apiVersion: platform.company.com/v1alpha1
+kind: EKSPlatformFoundation
+metadata:
+  name: standard
+spec:
+  # Core configuration (REQUIRED - update these values)
+  clusterName: <YOUR_CLUSTER_NAME>          # e.g., staging
+  region: <YOUR_AWS_REGION>                  # e.g., us-west-2
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"         # e.g., "123456789012"
+
+  # Platform profile
+  profile: staging
+
+  # Standard modules
+  modules:
+    observability: true
+    dns: true
+    compute: true
+    metrics: true
+    secrets: true
+    logging: true
+
+  # Observability (shared workspace with production)
+  observability:
+    ampWorkspaceID: <YOUR_AMP_WORKSPACE_ID>
+    ampRemoteWriteEndpoint: https://aps-workspaces.<YOUR_AWS_REGION>.amazonaws.com/workspaces/<YOUR_AMP_WORKSPACE_ID>/api/v1/remote_write
+    retentionDays: 15
+
+  # DNS
+  dns:
+    hostedZoneID: <YOUR_HOSTED_ZONE_ID>
+    domainFilter: <YOUR_DOMAIN>              # e.g., staging.example.com
+    zoneType: public
+    policy: upsert-only
+
+  # Compute (cost-optimized)
+  compute:
+    spotEnabled: true
+    computeOptimized: false
+    memoryOptimized: false
+    armGraviton: false
+
+  # Metrics
+  metrics:
+    highAvailability: true
+
+  # Secrets
+  secrets:
+    secretsPrefix: "<YOUR_SECRETS_PREFIX>"   # e.g., "eks/staging"
+    enableSecretsManager: true
+    syncInterval: "1h"
+
+  # Logging
+  logging:
+    destination: cloudwatch
+    retentionDays: 7
+    logGroups:
+      application: true
+      dataplane: false
+      audit: false

@@ -1,0 +1,30 @@
+apiVersion: platform.company.com/v1alpha1
+kind: TeamNamespace
+metadata:
+  name: data-team
+spec:
+  # Core configuration
+  teamName: data
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  environment: production
+  
+  # RBAC configuration
+  rbacProfile: admin  # Data team needs more control
+  adminUsers: "<ADMIN_USER_1>,<ADMIN_USER_2>"
+  developerUsers: "<DEV_USER_1>"
+  
+  # Resource quotas (larger for data workloads)
+  cpuQuota: "50"
+  memoryQuota: "100Gi"
+  storageQuota: "500Gi"
+  podQuota: "200"
+  
+  # Secrets access
+  secretsPrefix: "data/"
+  enableSecretsAccess: true
+  
+  # AWS service access (full data services)
+  enableAWSAccess: true
+  awsServices: "s3,dynamodb,sqs"

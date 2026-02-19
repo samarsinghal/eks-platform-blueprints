@@ -1,0 +1,172 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: eks-platform-security
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: EKSPlatformSecurity
+    group: platform.company.com
+    spec:
+      # Core configuration
+      clusterName: string | required=true
+
+      # Security profile
+      securityProfile: string | default="standard"  # permissive, standard, restricted
+
+      # Policy enforcement
+      policyEnforcement:
+        mode: string | default="deny"  # deny, dryrun, warn
+        enableAuditLogging: boolean | default=true
+
+      # Pod Security Standards
+      podSecurity:
+        enabled: boolean | default=true
+        defaultLevel: string | default="restricted"  # privileged, baseline, restricted
+        exemptNamespaces: string | default=""  # Comma-separated list of additional namespaces to exempt  # Additional namespaces to exempt beyond system namespaces
+
+      # Image security
+      imageSecurity:
+        enableAllowlist: boolean | default=false
+        allowedRegistries: string | default=""  # Comma-separated list of allowed registries
+        blockLatestTag: boolean | default=true
+        requireDigests: boolean | default=false  # Require image digests instead of tags
+
+      # Resource governance
+      resourceGovernance:
+        enforceResourceLimits: boolean | default=true
+        enforceRequiredLabels: boolean | default=true
+        requiredLabels: string | default="team,environment"  # Comma-separated required labels
+        maxReplicaCount: integer | default=0  # 0 = no limit
+
+      # Network policies
+      networkPolicies:
+        defaultDenyIngress: boolean | default=true
+        defaultDenyEgress: boolean | default=false
+
+      # RBAC baseline
+      rbac:
+        enabled: boolean | default=true
+        enableClusterViewerRole: boolean | default=false
+        auditClusterAdmin: boolean | default=true
+
+  resources:
+    # ==========================================
+    # POD SECURITY - Namespace labels for PSS enforcement
+    # ==========================================
+    - id: securityConfigMap
+      template:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: platform-security-config
+          namespace: kube-system
+          labels:
+            app.kubernetes.io/name: platform-security
+            security-profile: ${schema.spec.securityProfile}
+        data:
+          securityProfile: ${schema.spec.securityProfile}
+          enforcementMode: ${schema.spec.policyEnforcement.mode}
+          podSecurityLevel: ${schema.spec.podSecurity.defaultLevel}
+          blockLatestTag: ${string(schema.spec.imageSecurity.blockLatestTag)}
+          requireDigests: ${string(schema.spec.imageSecurity.requireDigests)}
+          enforceResourceLimits: ${string(schema.spec.resourceGovernance.enforceResourceLimits)}
+          enforceRequiredLabels: ${string(schema.spec.resourceGovernance.enforceRequiredLabels)}
+          requiredLabels: ${schema.spec.resourceGovernance.requiredLabels}
+          defaultDenyIngress: ${string(schema.spec.networkPolicies.defaultDenyIngress)}
+          defaultDenyEgress: ${string(schema.spec.networkPolicies.defaultDenyEgress)}
+
+    # ==========================================
+    # RBAC - Cluster viewer role
+    # ==========================================
+    - id: clusterViewerRole
+      includeWhen:
+        - ${schema.spec.rbac.enabled}
+      template:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          name: platform-viewer
+          labels:
+            app.kubernetes.io/name: platform-security
+        rules:
+          - apiGroups: [""]
+            resources: [namespaces, nodes, pods, services]
+            verbs: [get, list, watch]
+          - apiGroups: [apps]
+            resources: [deployments, replicasets, statefulsets, daemonsets]
+            verbs: [get, list, watch]
+          - apiGroups: [batch]
+            resources: [jobs, cronjobs]
+            verbs: [get, list, watch]
+          - apiGroups: [networking.k8s.io]
+            resources: [ingresses, networkpolicies]
+            verbs: [get, list, watch]
+
+    # ==========================================
+    # RBAC - Cluster admin audit role
+    # ==========================================
+    - id: adminAuditRole
+      includeWhen:
+        - ${schema.spec.rbac.auditClusterAdmin}
+      template:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          name: platform-admin-audit
+          labels:
+            app.kubernetes.io/name: platform-security
+        rules:
+          - apiGroups: [""]
+            resources: [events]
+            verbs: [get, list, watch]
+          - apiGroups: [rbac.authorization.k8s.io]
+            resources: [clusterroles, clusterrolebindings, roles, rolebindings]
+            verbs: [get, list, watch]
+
+    # ==========================================
+    # DEFAULT NETWORK POLICY - Deny ingress across all namespaces
+    # ==========================================
+    - id: defaultDenyIngressPolicy
+      includeWhen:
+        - ${schema.spec.networkPolicies.defaultDenyIngress}
+      template:
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
+        metadata:
+          name: platform-default-deny-ingress
+          namespace: default
+          labels:
+            app.kubernetes.io/name: platform-security
+        spec:
+          podSelector: {}
+          policyTypes: [Ingress]
+          ingress:
+            - from:
+                - podSelector: {}
+
+    # ==========================================
+    # DEFAULT NETWORK POLICY - Deny egress
+    # ==========================================
+    - id: defaultDenyEgressPolicy
+      includeWhen:
+        - ${schema.spec.networkPolicies.defaultDenyEgress}
+      template:
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
+        metadata:
+          name: platform-default-deny-egress
+          namespace: default
+          labels:
+            app.kubernetes.io/name: platform-security
+        spec:
+          podSelector: {}
+          policyTypes: [Egress]
+          egress:
+            - to:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: kube-system
+              ports:
+                - protocol: UDP
+                  port: 53

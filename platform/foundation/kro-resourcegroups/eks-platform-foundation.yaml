@@ -1,0 +1,267 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: eks-platform-foundation
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: EKSPlatformFoundation
+    group: platform.company.com
+    spec:
+      # Core configuration (required)
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+
+      # Platform profile for smart defaults
+      profile: string | default="production"  # production, staging, development
+
+      # Module toggles
+      modules:
+        observability: boolean | default=true
+        dns: boolean | default=true
+        compute: boolean | default=true
+        metrics: boolean | default=true
+        secrets: boolean | default=true
+        logging: boolean | default=true
+
+      # Observability configuration
+      observability:
+        ampWorkspaceID: string
+        ampRemoteWriteEndpoint: string
+        retentionDays: integer | default=15
+
+      # DNS configuration
+      dns:
+        hostedZoneID: string
+        domainFilter: string
+        zoneType: string | default="public"
+        policy: string | default="upsert-only"  # upsert-only, sync
+        txtOwnerID: string | default=""  # Unique ID per cluster for multi-cluster DNS
+
+      # Compute configuration
+      compute:
+        spotEnabled: boolean | default=true
+        computeOptimized: boolean | default=false
+        memoryOptimized: boolean | default=false
+        armGraviton: boolean | default=false
+        consolidationPolicy: string | default="WhenEmptyOrUnderutilized"
+
+      # Metrics configuration
+      metrics:
+        highAvailability: boolean | default=true
+
+      # Secrets configuration
+      secrets:
+        secretsPrefix: string | default="eks"
+        enableSecretsManager: boolean | default=true
+        enableParameterStore: boolean | default=false
+        syncInterval: string | default="1h"
+
+      # Ingress - managed by EKS Auto Mode, no blueprint needed
+      # Use annotations on Ingress/Service resources directly
+
+      # Logging configuration
+      logging:
+        destination: string | default="cloudwatch"  # cloudwatch, opensearch
+        retentionDays: integer | default=7
+        logGroupPrefix: string | default=""  # e.g., /aws/eks - auto-generated if empty
+        logGroups:
+          application: boolean | default=true
+          dataplane: boolean | default=false
+          audit: boolean | default=false
+
+  resources:
+    # ==========================================
+    # OBSERVABILITY MODULE
+    # ==========================================
+    - id: observabilityCluster
+      includeWhen:
+        - ${schema.spec.modules.observability}
+      template:
+        apiVersion: observability.company.com/v1alpha1
+        kind: ObservabilityCluster
+        metadata:
+          name: ${schema.spec.clusterName}
+          namespace: default
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          region: ${schema.spec.region}
+          ampWorkspaceID: ${schema.spec.observability.ampWorkspaceID}
+          ampRemoteWriteEndpoint: ${schema.spec.observability.ampRemoteWriteEndpoint}
+          accountID: ${schema.spec.accountID}
+
+    # ==========================================
+    # DNS MODULE
+    # ==========================================
+    - id: externalDNSCluster
+      includeWhen:
+        - ${schema.spec.modules.dns}
+      template:
+        apiVersion: externaldns.company.com/v1alpha1
+        kind: ExternalDNSCluster
+        metadata:
+          name: ${schema.spec.clusterName}
+          namespace: default
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          region: ${schema.spec.region}
+          accountID: ${schema.spec.accountID}
+          hostedZoneID: ${schema.spec.dns.hostedZoneID}
+          domainFilter: ${schema.spec.dns.domainFilter}
+          zoneType: ${schema.spec.dns.zoneType}
+          policy: ${schema.spec.dns.policy}
+          txtOwnerID: '${schema.spec.dns.txtOwnerID != "" ? schema.spec.dns.txtOwnerID : schema.spec.clusterName}'
+
+    # ==========================================
+    # COMPUTE MODULE - General Purpose
+    # ==========================================
+    - id: karpenterGeneralPurpose
+      includeWhen:
+        - ${schema.spec.modules.compute}
+      template:
+        apiVersion: karpenter.company.com/v1alpha1
+        kind: KarpenterNodePool
+        metadata:
+          name: general-purpose
+          namespace: default
+        spec:
+          nodePoolName: general-purpose
+          clusterName: ${schema.spec.clusterName}
+          capacityType: '${schema.spec.compute.spotEnabled ? "spot" : "on-demand"}'
+          architecture: amd64
+          cpuLimit: "500"
+          memoryLimit: "1000Gi"
+          consolidationPolicy: ${schema.spec.compute.consolidationPolicy}
+
+    # ==========================================
+    # COMPUTE MODULE - Compute Optimized
+    # ==========================================
+    - id: karpenterComputeOptimized
+      includeWhen:
+        - ${schema.spec.modules.compute}
+        - ${schema.spec.compute.computeOptimized}
+      template:
+        apiVersion: karpenter.company.com/v1alpha1
+        kind: KarpenterNodePool
+        metadata:
+          name: compute-optimized
+          namespace: default
+        spec:
+          nodePoolName: compute-optimized
+          clusterName: ${schema.spec.clusterName}
+          capacityType: '${schema.spec.compute.spotEnabled ? "spot" : "on-demand"}'
+          architecture: amd64
+          cpuLimit: "300"
+          memoryLimit: "600Gi"
+          consolidationPolicy: ${schema.spec.compute.consolidationPolicy}
+
+    # ==========================================
+    # COMPUTE MODULE - Memory Optimized
+    # ==========================================
+    - id: karpenterMemoryOptimized
+      includeWhen:
+        - ${schema.spec.modules.compute}
+        - ${schema.spec.compute.memoryOptimized}
+      template:
+        apiVersion: karpenter.company.com/v1alpha1
+        kind: KarpenterNodePool
+        metadata:
+          name: memory-optimized
+          namespace: default
+        spec:
+          nodePoolName: memory-optimized
+          clusterName: ${schema.spec.clusterName}
+          capacityType: '${schema.spec.compute.spotEnabled ? "spot" : "on-demand"}'
+          architecture: amd64
+          cpuLimit: "200"
+          memoryLimit: "1000Gi"
+          consolidationPolicy: ${schema.spec.compute.consolidationPolicy}
+
+    # ==========================================
+    # COMPUTE MODULE - ARM Graviton
+    # ==========================================
+    - id: karpenterARM
+      includeWhen:
+        - ${schema.spec.modules.compute}
+        - ${schema.spec.compute.armGraviton}
+      template:
+        apiVersion: karpenter.company.com/v1alpha1
+        kind: KarpenterNodePool
+        metadata:
+          name: arm-graviton
+          namespace: default
+        spec:
+          nodePoolName: arm-graviton
+          clusterName: ${schema.spec.clusterName}
+          capacityType: spot
+          architecture: arm64
+          cpuLimit: "200"
+          memoryLimit: "400Gi"
+          consolidationPolicy: ${schema.spec.compute.consolidationPolicy}
+
+    # ==========================================
+    # METRICS MODULE
+    # ==========================================
+    - id: metricsServer
+      includeWhen:
+        - ${schema.spec.modules.metrics}
+      template:
+        apiVersion: metrics.company.com/v1alpha1
+        kind: MetricsServer
+        metadata:
+          name: metrics-server
+          namespace: default
+        spec:
+          namespace: kube-system
+          replicas: '${schema.spec.metrics.highAvailability ? 2 : 1}'
+          cpuRequest: "100m"
+          memoryRequest: "200Mi"
+          cpuLimit: "500m"
+          memoryLimit: "1Gi"
+          enablePDB: ${schema.spec.metrics.highAvailability}
+
+    # ==========================================
+    # SECRETS MODULE
+    # ==========================================
+    - id: externalSecretsOperator
+      includeWhen:
+        - ${schema.spec.modules.secrets}
+      template:
+        apiVersion: secrets.company.com/v1alpha1
+        kind: ExternalSecretsOperator
+        metadata:
+          name: external-secrets
+          namespace: default
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          region: ${schema.spec.region}
+          accountID: ${schema.spec.accountID}
+          operatorNamespace: external-secrets-system
+          syncInterval: ${schema.spec.secrets.syncInterval}
+          secretsPrefix: ${schema.spec.secrets.secretsPrefix}
+          enableSecretsManager: ${schema.spec.secrets.enableSecretsManager}
+          enableParameterStore: ${schema.spec.secrets.enableParameterStore}
+
+    # ==========================================
+    # LOGGING MODULE
+    # ==========================================
+    - id: centralizedLogging
+      includeWhen:
+        - ${schema.spec.modules.logging}
+      template:
+        apiVersion: logging.company.com/v1alpha1
+        kind: CentralizedLogging
+        metadata:
+          name: ${schema.spec.clusterName}
+          namespace: default
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          region: ${schema.spec.region}
+          accountID: ${schema.spec.accountID}
+          logDestination: ${schema.spec.logging.destination}
+          logRetentionDays: ${schema.spec.logging.retentionDays}
+          cloudWatchLogGroup: '${schema.spec.logging.logGroupPrefix != "" ? schema.spec.logging.logGroupPrefix : "/aws/eks/" + schema.spec.clusterName}'
+          enableApplicationLogs: ${schema.spec.logging.logGroups.application}
+          enableSystemLogs: ${schema.spec.logging.logGroups.dataplane}
+          enableAuditLogs: ${schema.spec.logging.logGroups.audit}

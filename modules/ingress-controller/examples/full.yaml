@@ -1,0 +1,33 @@
+apiVersion: ingress.company.com/v1alpha1
+kind: IngressController
+metadata:
+  name: ingress-controller
+  namespace: default
+spec:
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+
+  # VPC Configuration
+  vpcID: <YOUR_VPC_ID>
+
+  # Controller Settings
+  controllerNamespace: kube-system
+  controllerType: aws-load-balancer
+  defaultIngressClass: alb
+
+  # IngressClasses
+  createExternalIngressClass: true
+  createInternalIngressClass: true
+
+  # Features
+  enableWAFv2: false
+  enableShield: false
+  enableCognito: false
+
+  # Resources
+  replicas: 2
+  cpuRequest: "100m"
+  memoryRequest: "256Mi"
+  cpuLimit: "500m"
+  memoryLimit: "1Gi"

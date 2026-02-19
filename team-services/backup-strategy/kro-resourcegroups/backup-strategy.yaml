@@ -1,0 +1,136 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: backup-strategy
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: BackupStrategy
+    group: platform.company.com
+    spec:
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+
+      # Backup configuration
+      backupNamespace: string | default="velero"
+      s3BucketName: string | required=true
+      scheduleExpression: string | default="0 2 * * *"  # Daily at 2am UTC
+      retentionDays: string | default="30"
+
+      # What to back up
+      includeNamespaces: string | default=""  # Comma-separated, empty = all
+      excludeNamespaces: string | default="kube-system,kube-public,kube-node-lease,velero"
+      includeResources: string | default=""  # Empty = all
+      snapshotVolumes: boolean | default=true
+
+  resources:
+    - id: backupNamespace
+      template:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: ${schema.spec.backupNamespace}
+          labels:
+            app.kubernetes.io/name: velero
+            managed-by: platform
+
+    - id: backupS3Bucket
+      template:
+        apiVersion: s3.services.k8s.aws/v1alpha1
+        kind: Bucket
+        metadata:
+          name: ${schema.spec.s3BucketName}
+          namespace: ${schema.spec.backupNamespace}
+        spec:
+          name: ${schema.spec.s3BucketName}
+          versioning:
+            status: Enabled
+          encryption:
+            rules:
+              - applyServerSideEncryptionByDefault:
+                  sseAlgorithm: aws:kms
+
+    - id: backupIAMPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.clusterName}-velero-policy
+          namespace: ${schema.spec.backupNamespace}
+        spec:
+          name: ${schema.spec.clusterName}-VeleroBackupPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket","s3:GetBucketLocation"],
+                  "Resource": ["arn:aws:s3:::${schema.spec.s3BucketName}","arn:aws:s3:::${schema.spec.s3BucketName}/*"]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["ec2:DescribeVolumes","ec2:DescribeSnapshots","ec2:CreateTags","ec2:CreateVolume","ec2:CreateSnapshot","ec2:DeleteSnapshot"],
+                  "Resource": "*"
+                }
+              ]
+            }
+
+    - id: backupIAMRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.clusterName}-velero-role
+          namespace: ${schema.spec.backupNamespace}
+        spec:
+          name: ${schema.spec.clusterName}-VeleroRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "pods.eks.amazonaws.com"},
+                "Action": ["sts:AssumeRole", "sts:TagSession"]
+              }]
+            }
+
+    - id: backupPodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: ${schema.spec.clusterName}-velero
+          namespace: ${schema.spec.backupNamespace}
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: ${schema.spec.backupNamespace}
+          serviceAccount: velero-server
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.clusterName}-VeleroRole
+
+    - id: backupServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: velero-server
+          namespace: ${schema.spec.backupNamespace}
+
+    - id: backupConfig
+      template:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: backup-config
+          namespace: ${schema.spec.backupNamespace}
+          labels:
+            app.kubernetes.io/name: velero
+        data:
+          clusterName: ${schema.spec.clusterName}
+          region: ${schema.spec.region}
+          bucket: ${schema.spec.s3BucketName}
+          schedule: ${schema.spec.scheduleExpression}
+          retentionDays: ${schema.spec.retentionDays}
+          excludeNamespaces: ${schema.spec.excludeNamespaces}
+          snapshotVolumes: ${string(schema.spec.snapshotVolumes)}

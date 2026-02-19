@@ -1,0 +1,11 @@
+apiVersion: karpenter.company.com/v1alpha1
+kind: KarpenterNodePool
+metadata:
+  name: arm-graviton
+spec:
+  nodePoolName: arm-graviton
+  clusterName: <YOUR_CLUSTER_NAME>
+  capacityType: spot
+  architecture: arm64
+  cpuLimit: "200"
+  memoryLimit: "400Gi"

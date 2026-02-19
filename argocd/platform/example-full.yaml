@@ -1,0 +1,46 @@
+# Deploys production platform foundation + security instances
+# Sync wave 1: runs after blueprint templates are registered
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-full
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # Foundation: observability, DNS, compute, metrics, secrets, logging
+    - repoURL: <YOUR_GIT_REPO_URL>
+      targetRevision: main
+      path: platform/foundation/examples
+      directory:
+        include: 'full.yaml'
+    # Security: pod security, RBAC, network policies, image security
+    - repoURL: <YOUR_GIT_REPO_URL>
+      targetRevision: main
+      path: platform/security/examples
+      directory:
+        include: 'restricted.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+  ignoreDifferences:
+    - group: platform.company.com
+      kind: EKSPlatformFoundation
+      jsonPointers: [/status]
+    - group: platform.company.com
+      kind: EKSPlatformSecurity
+      jsonPointers: [/status]

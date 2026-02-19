@@ -1,0 +1,212 @@
+---
+# KRO Additional Permissions
+# Extends KRO controller permissions using RBAC aggregation
+# Label 'rbac.kro.run/aggregate-to-controller: "true"' automatically
+# aggregates this ClusterRole into the KRO controller's permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kro:controller:additional-permissions
+  labels:
+    rbac.kro.run/aggregate-to-controller: "true"
+rules:
+# Custom API groups for platform blueprints
+- apiGroups:
+  - observability.company.com
+  - metrics.company.com
+  - externaldns.company.com
+  - secrets.company.com
+  - karpenter.company.com
+  - security.company.com
+  - namespace.company.com
+  - rbac.company.com
+  - cicd.company.com
+  - logging.company.com
+  - ingress.company.com
+  - backup.company.com
+  - platform.company.com
+  resources:
+  - '*'
+  verbs:
+  - '*'
+
+# Core Kubernetes resources
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - serviceaccounts
+  - services
+  - configmaps
+  - secrets
+  - persistentvolumeclaims
+  - resourcequotas
+  - pods
+  - events
+  verbs:
+  - '*'
+
+# Apps
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - statefulsets
+  - daemonsets
+  - replicasets
+  verbs:
+  - '*'
+
+# Batch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - '*'
+
+# RBAC
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  - clusterroles
+  - clusterrolebindings
+  verbs:
+  - '*'
+
+# Networking
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  - ingressclasses
+  - networkpolicies
+  verbs:
+  - '*'
+
+# Policy
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - '*'
+
+# ACK - IAM Controller
+- apiGroups:
+  - iam.services.k8s.aws
+  resources:
+  - policies
+  - roles
+  verbs:
+  - '*'
+
+# ACK - EKS Controller
+- apiGroups:
+  - eks.services.k8s.aws
+  resources:
+  - podidentityassociations
+  - clusters
+  verbs:
+  - '*'
+
+# ACK - Prometheus Service Controller
+- apiGroups:
+  - prometheusservice.services.k8s.aws
+  resources:
+  - workspaces
+  - rulegroupsnamespaces
+  verbs:
+  - '*'
+
+# ACK - CloudWatch Controller
+- apiGroups:
+  - cloudwatch.services.k8s.aws
+  resources:
+  - loggroups
+  verbs:
+  - '*'
+
+# ACK - ELBv2 Controller
+- apiGroups:
+  - elbv2.k8s.aws
+  resources:
+  - targetgroupbindings
+  - ingressclassparams
+  verbs:
+  - '*'
+
+# API Registration
+- apiGroups:
+  - apiregistration.k8s.io
+  resources:
+  - apiservices
+  verbs:
+  - '*'
+
+# Secrets Store CSI Driver
+- apiGroups:
+  - secrets-store.csi.x-k8s.io
+  resources:
+  - secretproviderclasses
+  verbs:
+  - '*'
+
+# GitHub Actions Runner Controller
+- apiGroups:
+  - actions.github.com
+  resources:
+  - autoscalingrunnersets
+  verbs:
+  - '*'
+
+# OPA Gatekeeper
+- apiGroups:
+  - templates.gatekeeper.sh
+  - constraints.gatekeeper.sh
+  resources:
+  - '*'
+  verbs:
+  - '*'
+
+# Velero (Backup/DR)
+- apiGroups:
+  - velero.io
+  resources:
+  - schedules
+  - backups
+  - restores
+  - backupstoragelocations
+  verbs:
+  - '*'
+
+# Karpenter
+- apiGroups:
+  - karpenter.sh
+  resources:
+  - nodepools
+  - nodeclaims
+  - ec2nodeclasses
+  verbs:
+  - '*'
+
+# ExternalDNS
+- apiGroups:
+  - externaldns.k8s.io
+  resources:
+  - dnsendpoints
+  verbs:
+  - '*'
+
+# External Secrets Operator
+- apiGroups:
+  - external-secrets.io
+  resources:
+  - secretstores
+  - clustersecretstores
+  - externalsecrets
+  verbs:
+  - '*'

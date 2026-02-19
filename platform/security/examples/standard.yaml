@@ -1,0 +1,41 @@
+apiVersion: platform.company.com/v1alpha1
+kind: EKSPlatformSecurity
+metadata:
+  name: standard
+spec:
+  clusterName: <YOUR_CLUSTER_NAME>          # e.g., staging
+
+  # Standard security profile
+  securityProfile: standard
+
+  # Balanced enforcement
+  policyEnforcement:
+    mode: deny
+    enableAuditLogging: true
+
+  # Pod Security Standards
+  podSecurity:
+    enabled: true
+    defaultLevel: baseline
+
+  # Image security
+  imageSecurity:
+    enableAllowlist: false
+    blockLatestTag: true
+
+  # Resource governance
+  resourceGovernance:
+    enforceResourceLimits: true
+    enforceRequiredLabels: true
+    requiredLabels: "team,environment"
+
+  # Network policies
+  networkPolicies:
+    defaultDenyIngress: true
+    defaultDenyEgress: false
+
+  # RBAC baseline
+  rbac:
+    enabled: true
+    enableClusterViewerRole: false
+    auditClusterAdmin: true

@@ -1,0 +1,12 @@
+apiVersion: karpenter.company.com/v1alpha1
+kind: KarpenterNodePool
+metadata:
+  name: general-purpose-spot
+spec:
+  nodePoolName: general-purpose-spot
+  clusterName: <YOUR_CLUSTER_NAME>
+  capacityType: spot
+  architecture: amd64
+  cpuLimit: "500"
+  memoryLimit: "1000Gi"
+  consolidationPolicy: WhenEmptyOrUnderutilized

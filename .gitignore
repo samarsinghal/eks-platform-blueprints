@@ -1,60 +1,33 @@
-# macOS System Files
+# macOS
 .DS_Store
-.AppleDouble
-.LSOverride
 ._*
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
 
-# Editor Directories and Files
+# Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Claude Code Files
-.claude/settings.local.json
-.claude/chats/
-.claude/artifacts/
-.claude/*.log
-.claude/cache/
+# AI tool configs
+.claude/
+.kiro/
 
-# Environment and Secrets
+# Secrets
 .env
 .env.local
 *.key
 *.pem
 *.crt
-secrets.yaml
-*-secret.yaml
 
-# Kubernetes Local Files
+# Kubernetes local files
 kubeconfig
 *.kubeconfig
 .kube/cache/
 
-# Temporary and Backup Files
+# Temporary files
 *.tmp
 *.bak
 *.backup
-*~
-.#*
-
-# Build and Test Artifacts
 *.log
 test-results/
-coverage/
-
-# Git
-.git/

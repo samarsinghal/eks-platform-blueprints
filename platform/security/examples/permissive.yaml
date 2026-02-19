@@ -1,0 +1,41 @@
+apiVersion: platform.company.com/v1alpha1
+kind: EKSPlatformSecurity
+metadata:
+  name: permissive
+spec:
+  clusterName: <YOUR_CLUSTER_NAME>          # e.g., development
+
+  # Permissive security profile for development
+  securityProfile: permissive
+
+  # Warning mode for development
+  policyEnforcement:
+    mode: warn
+    enableAuditLogging: true
+
+  # Pod Security Standards
+  podSecurity:
+    enabled: true
+    defaultLevel: baseline
+
+  # Image security
+  imageSecurity:
+    enableAllowlist: false
+    blockLatestTag: false
+
+  # Resource governance
+  resourceGovernance:
+    enforceResourceLimits: false
+    enforceRequiredLabels: true
+    requiredLabels: "team"
+
+  # Network policies
+  networkPolicies:
+    defaultDenyIngress: false
+    defaultDenyEgress: false
+
+  # RBAC baseline
+  rbac:
+    enabled: true
+    enableClusterViewerRole: true
+    auditClusterAdmin: false

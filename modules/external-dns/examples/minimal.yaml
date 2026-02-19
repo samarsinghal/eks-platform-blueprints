@@ -1,0 +1,14 @@
+apiVersion: externaldns.company.com/v1alpha1
+kind: ExternalDNSCluster
+metadata:
+  name: development
+  namespace: default
+spec:
+  clusterName: development
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  hostedZoneID: <YOUR_HOSTED_ZONE_ID>
+  domainFilter: dev.example.com
+  zoneType: public
+  policy: upsert-only
+  # sources defaults to ["service", "ingress"]

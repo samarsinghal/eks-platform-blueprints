@@ -1,0 +1,26 @@
+apiVersion: logging.company.com/v1alpha1
+kind: CentralizedLogging
+metadata:
+  name: centralized-logging
+  namespace: default
+spec:
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+
+  # Logging Configuration
+  loggingNamespace: amazon-cloudwatch
+  logDestination: cloudwatch
+  cloudWatchLogGroup: ""  # Auto-generated as /aws/eks/production/logs
+  logRetentionDays: 30
+
+  # Log Types
+  enableApplicationLogs: true
+  enableSystemLogs: true
+  enableAuditLogs: false
+
+  # Resources
+  cpuRequest: "100m"
+  memoryRequest: "128Mi"
+  cpuLimit: "500m"
+  memoryLimit: "512Mi"

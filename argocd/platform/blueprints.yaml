@@ -1,0 +1,48 @@
+# Deploys KRO blueprint templates (ResourceGraphDefinitions)
+# This is a prerequisite — must sync before any platform instances
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-blueprints
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: <YOUR_GIT_REPO_URL>
+      targetRevision: main
+      path: platform/foundation/kro-resourcegroups
+    - repoURL: <YOUR_GIT_REPO_URL>
+      targetRevision: main
+      path: platform/security/kro-resourcegroups
+    - repoURL: <YOUR_GIT_REPO_URL>
+      targetRevision: main
+      path: team-services/team-namespace/kro-resourcegroups
+    - repoURL: <YOUR_GIT_REPO_URL>
+      targetRevision: main
+      path: modules/observability/kro-resourcegroups
+    - repoURL: <YOUR_GIT_REPO_URL>
+      targetRevision: main
+      path: modules/external-dns/kro-resourcegroups
+    - repoURL: <YOUR_GIT_REPO_URL>
+      targetRevision: main
+      path: modules/karpenter/kro-resourcegroups
+    - repoURL: <YOUR_GIT_REPO_URL>
+      targetRevision: main
+      path: modules/metrics-server/kro-resourcegroups
+    - repoURL: <YOUR_GIT_REPO_URL>
+      targetRevision: main
+      path: modules/external-secrets/kro-resourcegroups
+    - repoURL: <YOUR_GIT_REPO_URL>
+      targetRevision: main
+      path: modules/centralized-logging/kro-resourcegroups
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,118 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: cost-visibility
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: CostVisibility
+    group: platform.company.com
+    spec:
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+
+      # Cost allocation
+      enableSplitCostAllocation: boolean | default=true
+      costAllocationTags: string | default="team,environment,cost-center"
+
+      # S3 for CUR data
+      curBucketName: string | default=""  # Cost and Usage Report bucket
+
+  resources:
+    - id: costNamespace
+      template:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: cost-visibility
+          labels:
+            app.kubernetes.io/name: cost-visibility
+            managed-by: platform
+
+    - id: costIAMPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.clusterName}-cost-visibility-policy
+          namespace: cost-visibility
+        spec:
+          name: ${schema.spec.clusterName}-CostVisibilityPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["ce:GetCostAndUsage","ce:GetCostForecast","ce:GetTags","ce:GetDimensionValues"],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["pricing:GetProducts","pricing:DescribeServices"],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["eks:DescribeCluster","eks:ListClusters"],
+                  "Resource": "*"
+                }
+              ]
+            }
+
+    - id: costIAMRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.clusterName}-cost-visibility-role
+          namespace: cost-visibility
+        spec:
+          name: ${schema.spec.clusterName}-CostVisibilityRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "pods.eks.amazonaws.com"},
+                "Action": ["sts:AssumeRole", "sts:TagSession"]
+              }]
+            }
+
+    - id: costPodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: ${schema.spec.clusterName}-cost-visibility
+          namespace: cost-visibility
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: cost-visibility
+          serviceAccount: cost-visibility
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.clusterName}-CostVisibilityRole
+
+    - id: costServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: cost-visibility
+          namespace: cost-visibility
+
+    - id: costConfig
+      template:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: cost-visibility-config
+          namespace: cost-visibility
+          labels:
+            app.kubernetes.io/name: cost-visibility
+        data:
+          clusterName: ${schema.spec.clusterName}
+          region: ${schema.spec.region}
+          enableSplitCostAllocation: ${string(schema.spec.enableSplitCostAllocation)}
+          costAllocationTags: ${schema.spec.costAllocationTags}
+          curBucketName: ${schema.spec.curBucketName}

@@ -1,148 +1,414 @@
-# EKS Platform Blueprints
+# EKS Platform Blueprints: Enterprise-Grade Kubernetes Platform Engineering
 
-Platform engineering blueprints for Amazon EKS using KRO ResourceGraphs and ACK. Build reusable infrastructure patterns for observability, security, multi-tenancy, and more.
+**Transform complex infrastructure into simple, reusable patterns** using Amazon EKS capabilities (KRO, ACK, Auto Mode).
 
-## Overview
+## 🎯 3-Tier Architecture for Enterprise Adoption
 
-This repository provides **declarative platform blueprints** that transform complex AWS and Kubernetes infrastructure into simple, reusable templates. Each blueprint uses:
+This project provides a **clear, layered approach** to platform engineering:
 
-- **KRO (Kubernetes Resource Orchestrator)** - Define high-level patterns that expand into multiple resources
-- **ACK (AWS Controllers for Kubernetes)** - Manage AWS resources natively through Kubernetes
-- **GitOps (ArgoCD)** - Automated deployment and lifecycle management
-- **EKS Capabilities** - Managed add-ons built directly into Amazon EKS
-
-## What are Platform Blueprints?
-
-Platform blueprints are **reusable infrastructure patterns** that:
-- Hide complexity behind simple parameters (3-7 inputs)
-- Expand into complete, properly-configured resource stacks (5-15 resources)
-- Enable self-service for development teams
-- Maintain central control for platform teams
-- Scale from 1 to 100+ clusters without additional operational overhead
-
-**Example**: Instead of manually configuring monitoring for each cluster (2-3 hours), apply a single YAML file with 5 parameters and get complete observability in 30 seconds.
-
-## Available Blueprints
-
-### 🔍 Observability
-**Status**: ✅ Production-ready
-
-Complete multi-cluster observability using Amazon Managed Prometheus (AMP) and Amazon Managed Grafana (AMG).
-
-**What you get**:
-- Centralized metrics storage (single AMP workspace for all clusters)
-- ADOT collectors deployed automatically
-- Pre-configured recording rules and alerts
-- Grafana dashboards with unified visibility
-- Pod Identity authentication (no IRSA complexity)
-
-**Quick start**:
-```bash
-# Platform team deploys once (2 parameters)
-kubectl apply -f observability/kro-resourcegroups/observability-platform.yaml
-kubectl apply -f observability/examples/platform/company-observability.yaml
-
-# Per cluster (5 parameters, ~30 seconds)
-kubectl apply -f observability/examples/clusters/production/cluster.yaml
+```
+┌─────────────────────────────────────────────────────────┐
+│  Tier 1: Platform Foundation (Infrastructure)           │
+│  Deploy once per cluster - Complete platform in 2 min   │
+│  • Observability  • DNS  • Compute  • Metrics           │
+│  • Secrets  • Logging                                   │
+└─────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│  Tier 2: Platform Security (Governance)                 │
+│  Deploy once per cluster - Security baseline            │
+│  • Pod Security  • RBAC  • Network Policies             │
+│  • Image Security  • Resource Governance                │
+└─────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│  Tier 3: Team Services (Application-Level)              │
+│  Deploy per team/app - Self-service                     │
+│  • Team Namespaces  • GitHub Runners  • Backup          │
+└─────────────────────────────────────────────────────────┘
 ```
 
-**Learn more**: [observability/README.md](observability/README.md)
+## 🚀 Quick Start: 3 Commands to Production
+
+```bash
+# Step 1: Deploy platform infrastructure (2 minutes)
+kubectl apply -f platform/foundation/examples/full.yaml
+
+# Step 2: Deploy security baseline (30 seconds)
+kubectl apply -f platform/security/examples/restricted.yaml
+
+# Step 3: Onboard teams (10 seconds per team)
+kubectl apply -f team-services/team-namespace/examples/backend-team.yaml
+```
+
+**Result**: Production-ready EKS platform with observability, DNS, compute optimization, security policies, and team namespaces!
 
 ---
 
-## Coming Soon
+## Why This Approach?
 
-Additional blueprints are planned for:
-- 🔐 **Security** - Application security stacks (WAF, policies, IAM)
-- 👥 **Team Onboarding** - Complete team workspaces with quotas and RBAC
-- 🏢 **Multi-Tenancy** - Tenant isolation with dedicated resources
-- 💾 **Database** - Production-ready database configurations
-- 🚀 **CI/CD** - Complete pipeline setup
+### The Problem with Traditional Methods
 
-## Architecture Pattern
+**Before** (Traditional approach):
+- 50+ Terraform modules to maintain
+- 30+ Helm charts with version conflicts
+- Multiple Kustomize overlays per environment
+- Separate tools for AWS resources (Terraform) and K8s resources (Helm)
+- 2-3 hours to set up monitoring per cluster
+- Inconsistent configurations across clusters
 
-All blueprints follow this pattern:
+**After** (This project):
+- **Single YAML file** per tier
+- **8-10 parameters** instead of 50+
+- **100% Kubernetes-native** (no Terraform/Helm)
+- **2 minutes** to deploy complete platform
+- **Consistent** across all clusters
+- **GitOps-ready** out of the box
 
+### Key Benefits
+
+✅ **Simplicity**: 3 YAML files instead of 50+ configuration files  
+✅ **Speed**: 2 minutes vs 2-3 hours for platform setup  
+✅ **Consistency**: Same patterns across 1 or 100 clusters  
+✅ **Self-Service**: Teams deploy without platform team intervention  
+✅ **Cost-Optimized**: Leverage EKS managed capabilities (no operational overhead)  
+✅ **GitOps-Native**: All changes tracked and automated  
+
+---
+
+## Architecture Overview
+
+### Tier 1: Platform Foundation
+
+**One resource creates complete infrastructure**:
+
+```yaml
+apiVersion: platform.company.com/v1alpha1
+kind: EKSPlatformFoundation
+metadata:
+  name: production
+spec:
+  # Core (3 params)
+  clusterName: production
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  
+  # Profile-based defaults
+  profile: production  # production|staging|development
+  
+  # Module toggles (all true by default)
+  modules:
+    observability: true  # AMP + AMG + ADOT
+    dns: true           # ExternalDNS + Route53
+    compute: true       # Karpenter NodePools
+    metrics: true       # Metrics Server
+    secrets: true       # External Secrets Operator
+    logging: true       # CloudWatch/OpenSearch
+  
+  # Module configurations (smart defaults)
+  observability:
+    ampWorkspaceID: <YOUR_AMP_WORKSPACE_ID>
+    ampRemoteWriteEndpoint: <YOUR_AMP_REMOTE_WRITE_ENDPOINT>
+  
+  dns:
+    hostedZoneID: <YOUR_HOSTED_ZONE_ID>
+    domainFilter: <YOUR_DOMAIN>
+  
+  compute:
+    spotEnabled: true
 ```
-Simple Instance YAML (3-7 parameters)
-         ↓
-KRO ResourceGraphDefinition (template)
-         ↓
-Multiple Kubernetes Resources (5-15)
-         ↓
-ACK Controllers call AWS APIs
-         ↓
-Complete AWS + Kubernetes Infrastructure
+
+**What you get**: Up to 50+ resources from 8-10 parameters
+
+### Tier 2: Platform Security
+
+**Security baseline for governance**:
+
+```yaml
+apiVersion: platform.company.com/v1alpha1
+kind: EKSPlatformSecurity
+metadata:
+  name: restricted
+spec:
+  clusterName: production
+  
+  # Security profile
+  securityProfile: restricted  # permissive|standard|restricted
+  
+  # Policy enforcement
+  policyEnforcement:
+    mode: deny  # deny|dryrun|warn
+  
+  # Pod Security Standards
+  podSecurity:
+    enabled: true
+    defaultLevel: restricted
+  
+  # Image security
+  imageSecurity:
+    enableAllowlist: true
+    allowedRegistries: "<YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_AWS_REGION>.amazonaws.com"
+    blockLatestTag: true
+  
+  # Resource governance
+  resourceGovernance:
+    enforceResourceLimits: true
+    requiredLabels: "team,environment,cost-center"
 ```
 
-**Benefits**:
-- **Consistency**: Same pattern deployed everywhere
-- **Repeatability**: Adding cluster #20 takes same time as #2
-- **Self-service**: Dev teams deploy without platform team
-- **Central control**: Platform teams update templates once
-- **GitOps-native**: All changes tracked in Git
+**What you get**: Complete security baseline with OPA policies, RBAC, and network policies
 
-## Prerequisites
+### Tier 3: Team Services
 
-- Amazon EKS cluster (version 1.28 or later)
-- EKS add-ons installed:
-  - ACK controllers (service-specific, e.g., Prometheus, IAM, EKS)
-  - KRO (Kubernetes Resource Orchestrator)
-  - ADOT (AWS Distro for OpenTelemetry)
-  - ArgoCD (optional, for GitOps automation)
-- kubectl configured to access your cluster
-- AWS CLI with appropriate permissions
+**Self-service for development teams**:
 
-## Quick Start
+```yaml
+apiVersion: platform.company.com/v1alpha1
+kind: TeamNamespace
+metadata:
+  name: backend-team
+spec:
+  teamName: backend
+  clusterName: production
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  
+  # RBAC profile (merged from developer-rbac)
+  rbacProfile: developer  # viewer|developer|admin
+  adminUsers: "<ADMIN_USER_1>,<ADMIN_USER_2>"
+  developerUsers: "<DEV_USER_1>,<DEV_USER_2>"
+  
+  # Resource quotas
+  cpuQuota: "20"
+  memoryQuota: "40Gi"
+  
+  # Secrets access
+  secretsPrefix: "backend/"
+  enableSecretsAccess: true
+  
+  # Optional AWS service access
+  enableAWSAccess: true
+  awsServices: "s3,dynamodb"
+```
 
-1. **Choose a blueprint** from the directories above
-2. **Deploy the ResourceGraphDefinition** (one-time setup):
-   ```bash
-   kubectl apply -f <blueprint>/kro-resourcegroups/
-   ```
-3. **Create an instance** by copying and customizing an example:
-   ```bash
-   kubectl apply -f <blueprint>/examples/
-   ```
-4. **Verify deployment**:
-   ```bash
-   kubectl get <ResourceType> -o wide
-   ```
+**What you get**: Namespace with RBAC, quotas, network policies, secrets access, and AWS permissions
+
+---
 
 ## Repository Structure
 
 ```
 eks-platform-blueprints/
-├── README.md                     # This file
-├── CLAUDE.md                     # AI assistant guidance
-├── observability/                # Multi-cluster observability blueprint
-│   ├── kro-resourcegroups/      # KRO template definitions
-│   ├── examples/                # Instance files (platform + clusters)
-│   ├── argocd/                  # GitOps automation configs
-│   ├── diagrams/                # Architecture diagrams
-│   └── README.md                # Detailed observability guide
-└── .gitignore
+├── platform/                    # Tier 1 & 2: Platform-level
+│   ├── foundation/             # Infrastructure layer
+│   │   ├── kro-resourcegroups/
+│   │   │   └── eks-platform-foundation.yaml
+│   │   └── examples/
+│   │       ├── full.yaml
+│   │       ├── standard.yaml
+│   │       └── minimal.yaml
+│   │
+│   ├── security/               # Security & governance layer
+│   │   ├── kro-resourcegroups/
+│   │   │   └── eks-platform-security.yaml
+│   │   └── examples/
+│   │       ├── restricted.yaml
+│   │       ├── standard.yaml
+│   │       └── permissive.yaml
+│
+├── team-services/              # Tier 3: Application-level
+│   ├── team-namespace/         # Team onboarding (merged with RBAC)
+│   ├── github-runner/          # Self-hosted runners
+│   └── backup-strategy/        # Velero backup/DR per cluster
+│
+├── modules/                    # Individual modules (advanced users)
+│   ├── observability/          # AMP + AMG + ADOT
+│   ├── external-dns/           # DNS automation
+│   ├── karpenter/              # Compute optimization
+│   ├── metrics-server/         # HPA enablement
+│   ├── external-secrets/       # Secrets sync
+│   ├── ingress-controller/     # ALB/NLB
+│   ├── centralized-logging/    # CloudWatch/OpenSearch
+│   ├── certificate-manager/   # cert-manager + Let's Encrypt
+│   └── cost-visibility/       # Split cost allocation
+│
+├── bootstrap/                  # One-command deployment
+│   ├── deploy-blueprints.sh   # Deploy all templates
+│   └── health-check.sh        # Validate platform
+│
+├── argocd/                     # GitOps automation
+│   ├── root-app.yaml          # App of Apps
+│   ├── platform/              # Platform applications
+│   └── teams/                 # Team applications
+│
+└── README.md                   # This file
 ```
 
-## How to Use This Repository
+---
 
-### For Platform Teams
-1. Deploy ResourceGraphDefinitions to your management cluster
-2. Customize templates for your organization's standards
-3. Set up ArgoCD to watch this repository (optional)
-4. Provide examples to development teams
+## Detailed Guides
 
-### For Development Teams
-1. Copy an example from the blueprint you need
-2. Update parameters (cluster name, region, etc.)
-3. Apply to your cluster: `kubectl apply -f your-config.yaml`
-4. Verify resources are created correctly
+### Platform Foundation
+- [Platform Foundation Guide](platform/foundation/README.md) - Complete infrastructure setup
+- Includes: Observability, DNS, Compute, Metrics, Secrets, Logging
 
-### For GitOps Automation
-1. Configure ArgoCD Applications/ApplicationSets
-2. Commit instance files to Git
-3. ArgoCD automatically deploys and syncs
-4. All changes tracked with audit trail
+### Platform Security
+- [Platform Security Guide](platform/security/README.md) - Security baseline and governance
+- Includes: Pod Security, RBAC, Network Policies, Image Security
+
+### Team Services
+- Team Namespace - Team onboarding with RBAC (`team-services/team-namespace/`)
+- GitHub Runner - Self-hosted CI/CD (`team-services/github-runner/`)
+
+### Individual Modules (Advanced)
+- [Observability](modules/observability/README.md) - AMP + AMG + ADOT
+- [ExternalDNS](modules/external-dns/README.md) - DNS automation
+- [Karpenter](modules/karpenter/README.md) - Compute optimization
+- [Metrics Server](modules/metrics-server/README.md) - HPA enablement
+- [External Secrets](modules/external-secrets/README.md) - Secrets sync
+- Ingress Controller (`modules/ingress-controller/`)
+- Centralized Logging (`modules/centralized-logging/`)
+- Certificate Manager (`modules/certificate-manager/`)
+- Cost Visibility (`modules/cost-visibility/`)
+---
+
+## Prerequisites
+
+- **Amazon EKS Auto Mode cluster** (version 1.28+)
+- **EKS Capabilities** enabled:
+  - `kro` - Kubernetes Resource Orchestrator
+  - `ack` - AWS Controllers for Kubernetes (IAM, EKS, Prometheus Service)
+  - `argo-cd` - GitOps automation
+- **kubectl** configured for your cluster
+- **AWS CLI** with appropriate permissions
+
+Enable capabilities via the EKS console or CLI:
+```bash
+aws eks update-cluster-config --name <cluster> \
+  --compute-config enabled=true \
+  --kubernetes-network-config '{"elasticLoadBalancing":{"enabled":true}}' \
+  --storage-config '{"blockStorage":{"enabled":true}}'
+```
+
+---
+
+## Deployment Options
+
+### Option 1: Automated Bootstrap (Recommended)
+
+```bash
+cd bootstrap
+./deploy-blueprints.sh
+```
+
+**What it does**:
+1. Configures KRO RBAC
+2. Deploys all blueprint templates
+3. Ready for platform instances
+
+**Time**: ~2 minutes
+
+### Option 2: Manual Step-by-Step
+
+```bash
+# 1. KRO Setup (one-time)
+kubectl apply -f kro-setup/rbac.yaml
+kubectl rollout restart deployment -n kro-system kro
+
+# 2. Deploy platform templates
+kubectl apply -f platform/foundation/kro-resourcegroups/
+kubectl apply -f platform/security/kro-resourcegroups/
+kubectl apply -f team-services/team-namespace/kro-resourcegroups/
+
+# 3. Deploy platform instances
+kubectl apply -f platform/foundation/examples/full.yaml
+kubectl apply -f platform/security/examples/restricted.yaml
+
+# 4. Onboard teams
+kubectl apply -f team-services/team-namespace/examples/backend-team.yaml
+```
+
+### Option 3: GitOps with ArgoCD
+
+```bash
+# Deploy root application (App of Apps pattern)
+kubectl apply -f argocd/root-app.yaml
+
+# ArgoCD automatically deploys:
+# - Platform foundation
+# - Platform security
+# - Team namespaces
+```
+
+---
+
+## Multi-Cluster Deployment
+
+Deploy the same platform to multiple clusters:
+
+```bash
+# Production cluster
+kubectl apply -f platform/foundation/examples/full.yaml
+kubectl apply -f platform/security/examples/restricted.yaml
+
+# Staging cluster
+kubectl apply -f platform/foundation/examples/standard.yaml
+kubectl apply -f platform/security/examples/standard.yaml
+
+# Development cluster
+kubectl apply -f platform/foundation/examples/minimal.yaml
+kubectl apply -f platform/security/examples/permissive.yaml
+```
+
+All clusters automatically:
+- Send metrics to same AMP workspace (unified visibility)
+- Use consistent DNS management
+- Have cost-optimized compute (spot instances)
+- Follow security baselines
+
+---
+
+## Design Philosophy
+
+### 1. Complement, Don't Duplicate
+
+These blueprints **complement EKS add-ons** rather than replacing them.
+
+**Use EKS Add-ons** (managed by AWS):
+- AWS Load Balancer Controller
+- ADOT (OpenTelemetry Operator)
+- Karpenter
+- EBS/EFS CSI Drivers
+- VPC CNI, CoreDNS, kube-proxy
+
+**Use These Blueprints** (not available as add-ons):
+- ✅ Platform orchestration (foundation + security)
+- ✅ Observability configuration (AMP workspace, collectors, rules)
+- ✅ DNS automation (ExternalDNS)
+- ✅ Team onboarding (namespace templates with RBAC/quotas/secrets)
+- ✅ Compute configuration (Karpenter NodePool templates)
+- ✅ Security policies (OPA Gatekeeper)
+
+### 2. Layered Architecture
+
+**Tier 1 (Foundation)**: Infrastructure that every cluster needs  
+**Tier 2 (Security)**: Governance and compliance baseline  
+**Tier 3 (Team Services)**: Self-service for development teams  
+
+### 3. Smart Defaults with Flexibility
+
+- **Production profile**: All modules enabled, high availability, strict security
+- **Staging profile**: Standard modules, balanced settings
+- **Development profile**: Essential modules, cost-optimized, permissive security
+
+### 4. Kubernetes-Native
+
+- Everything expressed as Kubernetes resources
+- No Terraform, Helm, or Kustomize required
+- ACK manages AWS resources through kubectl
+- KRO orchestrates complex patterns
+
+---
 
 ## Key Technologies
 
@@ -154,18 +420,7 @@ eks-platform-blueprints/
 | **ADOT** | OpenTelemetry distribution for AWS | https://aws-otel.github.io/ |
 | **ArgoCD** | GitOps continuous delivery | https://argo-cd.readthedocs.io/ |
 
-## Design Philosophy
-
-These blueprints are designed with these principles:
-
-1. **Simplicity First**: Minimize required parameters (3-7 inputs)
-2. **Sensible Defaults**: Production-ready configurations out of the box
-3. **Declarative**: Everything expressed as Kubernetes resources
-4. **Composable**: Blueprints can reference each other
-5. **GitOps-Native**: Source of truth in Git, automated deployment
-6. **Cloud-Native**: Leverage AWS managed services where possible
-7. **Observable**: Built-in monitoring and logging
-8. **Secure**: Least-privilege IAM, Pod Identity, encryption by default
+---
 
 ## Contributing
 
@@ -175,18 +430,13 @@ This repository serves as a reference implementation. Feel free to:
 - Share your own blueprint patterns
 - Provide feedback on the approach
 
-## Additional Resources
-
-- **EKS Capabilities**: https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html
-- **ACK Community**: https://aws-controllers-k8s.github.io/community/
-- **KRO Documentation**: https://kro.run/
-- **AWS Containers Blog**: https://aws.amazon.com/blogs/containers/
+---
 
 ## Support
 
 For questions, issues, or feedback:
 - Open an issue in this repository
-- Refer to individual blueprint README files for detailed guides
+- Refer to individual blueprint README files
 - Check AWS documentation links above
 
 ---

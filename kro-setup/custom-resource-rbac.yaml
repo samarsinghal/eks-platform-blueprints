@@ -1,0 +1,45 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kro:controller:custom-resources
+rules:
+  # Platform Foundation resources
+  - apiGroups: ["platform.company.com"]
+    resources: ["eksplatformfoundations"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["platform.company.com"]
+    resources: ["eksplatformfoundations/status"]
+    verbs: ["get", "update", "patch"]
+  
+  # Platform Security resources
+  - apiGroups: ["platform.company.com"]
+    resources: ["eksplatformsecurities"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["platform.company.com"]
+    resources: ["eksplatformsecurities/status"]
+    verbs: ["get", "update", "patch"]
+  
+  # Team Namespace resources
+  - apiGroups: ["platform.company.com"]
+    resources: ["teamnamespaces"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["platform.company.com"]
+    resources: ["teamnamespaces/status"]
+    verbs: ["get", "update", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kro:controller:custom-resources
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kro:controller:custom-resources
+subjects:
+  - kind: ServiceAccount
+    name: kro
+    namespace: kro-system
+  - kind: User
+    name: capabilities.eks.amazonaws.com
+    apiGroup: rbac.authorization.k8s.io

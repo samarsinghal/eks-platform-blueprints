@@ -1,0 +1,30 @@
+apiVersion: platform.company.com/v1alpha1
+kind: TeamNamespace
+metadata:
+  name: frontend-team
+spec:
+  # Core configuration
+  teamName: frontend
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  environment: production
+  
+  # RBAC configuration
+  rbacProfile: developer
+  adminUsers: "<ADMIN_USER_1>"
+  developerUsers: "<DEV_USER_1>,<DEV_USER_2>"
+  
+  # Resource quotas (smaller for frontend)
+  cpuQuota: "10"
+  memoryQuota: "20Gi"
+  storageQuota: "50Gi"
+  podQuota: "50"
+  
+  # Secrets access
+  secretsPrefix: "frontend/"
+  enableSecretsAccess: true
+  
+  # AWS service access (S3 only for static assets)
+  enableAWSAccess: true
+  awsServices: "s3"

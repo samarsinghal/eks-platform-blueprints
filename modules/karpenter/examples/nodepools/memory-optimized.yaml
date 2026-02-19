@@ -1,0 +1,11 @@
+apiVersion: karpenter.company.com/v1alpha1
+kind: KarpenterNodePool
+metadata:
+  name: memory-optimized
+spec:
+  nodePoolName: memory-optimized
+  clusterName: <YOUR_CLUSTER_NAME>
+  capacityType: spot
+  architecture: amd64
+  cpuLimit: "200"
+  memoryLimit: "1000Gi"

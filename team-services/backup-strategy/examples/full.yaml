@@ -1,0 +1,13 @@
+apiVersion: platform.company.com/v1alpha1
+kind: BackupStrategy
+metadata:
+  name: cluster-backup
+spec:
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  s3BucketName: "<YOUR_CLUSTER_NAME>-velero-backups"
+  scheduleExpression: "0 2 * * *"       # Daily at 2am UTC
+  retentionDays: "30"
+  excludeNamespaces: "kube-system,kube-public,kube-node-lease,velero"
+  snapshotVolumes: true

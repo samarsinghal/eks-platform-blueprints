@@ -1,0 +1,216 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: team-namespace
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: TeamNamespace
+    group: platform.company.com
+    spec:
+      # Core configuration
+      teamName: string | required=true
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+      environment: string | default="production"  # production, staging, development
+
+      # RBAC Profile
+      rbacProfile: string | default="developer"  # viewer, developer, admin
+      adminUsers: string | default=""
+      developerUsers: string | default=""
+      viewerUsers: string | default=""
+
+      # Resource quotas
+      cpuQuota: string | default="20"
+      memoryQuota: string | default="40Gi"
+      storageQuota: string | default="200Gi"
+      podQuota: string | default="100"
+
+      # Network policies
+      enableNetworkPolicies: boolean | default=true
+
+      # Secrets configuration
+      secretsPrefix: string | default=""
+      enableSecretsAccess: boolean | default=true
+
+      # AWS service access (optional)
+      enableAWSAccess: boolean | default=false
+      awsServices: string | default=""  # s3,dynamodb,sqs,sns,kinesis
+
+  resources:
+    # Namespace
+    - id: teamNamespace
+      template:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: ${schema.spec.teamName}
+          labels:
+            team: ${schema.spec.teamName}
+            environment: ${schema.spec.environment}
+            managed-by: platform
+            rbac-profile: ${schema.spec.rbacProfile}
+
+    # ResourceQuota
+    - id: teamResourceQuota
+      template:
+        apiVersion: v1
+        kind: ResourceQuota
+        metadata:
+          name: team-quota
+          namespace: ${schema.spec.teamName}
+        spec:
+          hard:
+            requests.cpu: ${schema.spec.cpuQuota}
+            requests.memory: ${schema.spec.memoryQuota}
+            requests.storage: ${schema.spec.storageQuota}
+            limits.cpu: ${schema.spec.cpuQuota}
+            limits.memory: ${schema.spec.memoryQuota}
+            persistentvolumeclaims: "10"
+            pods: ${schema.spec.podQuota}
+            services: "20"
+            configmaps: "50"
+            secrets: "50"
+
+    # LimitRange
+    - id: teamLimitRange
+      template:
+        apiVersion: v1
+        kind: LimitRange
+        metadata:
+          name: team-limits
+          namespace: ${schema.spec.teamName}
+        spec:
+          limits:
+            - type: Container
+              default:
+                cpu: 500m
+                memory: 512Mi
+              defaultRequest:
+                cpu: 100m
+                memory: 128Mi
+              max:
+                cpu: "4"
+                memory: 8Gi
+              min:
+                cpu: 50m
+                memory: 64Mi
+
+    # Developer Role
+    - id: developerRole
+      template:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: Role
+        metadata:
+          name: team-developer
+          namespace: ${schema.spec.teamName}
+        rules:
+          - apiGroups: ["", "apps", "batch"]
+            resources: [pods, pods/log, pods/exec, services, configmaps, secrets, persistentvolumeclaims, deployments, replicasets, statefulsets, daemonsets, jobs, cronjobs]
+            verbs: [get, list, watch, create, update, patch, delete]
+          - apiGroups: [networking.k8s.io]
+            resources: [ingresses, networkpolicies]
+            verbs: [get, list, watch, create, update, patch, delete]
+          - apiGroups: [autoscaling]
+            resources: [horizontalpodautoscalers]
+            verbs: [get, list, watch, create, update, patch, delete]
+
+    # Admin Role
+    - id: adminRole
+      template:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: Role
+        metadata:
+          name: team-admin
+          namespace: ${schema.spec.teamName}
+        rules:
+          - apiGroups: ["*"]
+            resources: ["*"]
+            verbs: ["*"]
+
+    # Developer RoleBinding
+    - id: developerRoleBinding
+      includeWhen:
+        - ${schema.spec.developerUsers != ""}
+      template:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: RoleBinding
+        metadata:
+          name: team-developer-binding
+          namespace: ${schema.spec.teamName}
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: Role
+          name: team-developer
+        subjects:
+          - kind: User
+            name: ${schema.spec.developerUsers}
+            apiGroup: rbac.authorization.k8s.io
+
+    # Admin RoleBinding
+    - id: adminRoleBinding
+      includeWhen:
+        - ${schema.spec.adminUsers != ""}
+      template:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: RoleBinding
+        metadata:
+          name: team-admin-binding
+          namespace: ${schema.spec.teamName}
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: Role
+          name: team-admin
+        subjects:
+          - kind: User
+            name: ${schema.spec.adminUsers}
+            apiGroup: rbac.authorization.k8s.io
+
+    # Network Policies
+    - id: networkPolicyDenyIngress
+      includeWhen:
+        - ${schema.spec.enableNetworkPolicies}
+      template:
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
+        metadata:
+          name: deny-ingress-by-default
+          namespace: ${schema.spec.teamName}
+        spec:
+          podSelector: {}
+          policyTypes: [Ingress]
+          ingress:
+            - from:
+                - podSelector: {}
+
+    - id: networkPolicyAllowDNS
+      includeWhen:
+        - ${schema.spec.enableNetworkPolicies}
+      template:
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
+        metadata:
+          name: allow-dns
+          namespace: ${schema.spec.teamName}
+        spec:
+          podSelector: {}
+          policyTypes: [Egress]
+          egress:
+            - to:
+                - namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: kube-system
+              ports:
+                - protocol: UDP
+                  port: 53
+            - {}
+
+    # ServiceAccount
+    - id: teamServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: team-workload
+          namespace: ${schema.spec.teamName}
