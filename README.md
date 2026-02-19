@@ -50,8 +50,8 @@ kubectl apply -f team-services/team-namespace/examples/backend-team.yaml
 ### The Problem with Traditional Methods
 
 **Before** (Traditional approach):
-- 50+ Terraform modules to maintain
-- 30+ Helm charts with version conflicts
+- Multiple Terraform modules to maintain
+- Multiple Helm charts with version conflicts
 - Multiple Kustomize overlays per environment
 - Separate tools for AWS resources (Terraform) and K8s resources (Helm)
 - 2-3 hours to set up monitoring per cluster
@@ -89,7 +89,7 @@ metadata:
   name: production
 spec:
   # Core (3 params)
-  clusterName: production
+  clusterName: <YOUR_CLUSTER_NAME>
   region: <YOUR_AWS_REGION>
   accountID: "<YOUR_AWS_ACCOUNT_ID>"
   
@@ -130,7 +130,7 @@ kind: EKSPlatformSecurity
 metadata:
   name: restricted
 spec:
-  clusterName: production
+  clusterName: <YOUR_CLUSTER_NAME>
   
   # Security profile
   securityProfile: restricted  # permissive|standard|restricted
@@ -156,7 +156,7 @@ spec:
     requiredLabels: "team,environment,cost-center"
 ```
 
-**What you get**: Complete security baseline with OPA policies, RBAC, and network policies
+**What you get**: Complete security baseline with pod security standards, RBAC, and network policies
 
 ### Tier 3: Team Services
 
@@ -169,11 +169,11 @@ metadata:
   name: backend-team
 spec:
   teamName: backend
-  clusterName: production
+  clusterName: <YOUR_CLUSTER_NAME>
   region: <YOUR_AWS_REGION>
   accountID: "<YOUR_AWS_ACCOUNT_ID>"
   
-  # RBAC profile (merged from developer-rbac)
+  # RBAC profile
   rbacProfile: developer  # viewer|developer|admin
   adminUsers: "<ADMIN_USER_1>,<ADMIN_USER_2>"
   developerUsers: "<DEV_USER_1>,<DEV_USER_2>"
@@ -376,7 +376,6 @@ These blueprints **complement EKS add-ons** rather than replacing them.
 
 **Use EKS Add-ons** (managed by AWS):
 - AWS Load Balancer Controller
-- ADOT (OpenTelemetry Operator)
 - Karpenter
 - EBS/EFS CSI Drivers
 - VPC CNI, CoreDNS, kube-proxy
@@ -387,7 +386,7 @@ These blueprints **complement EKS add-ons** rather than replacing them.
 - ✅ DNS automation (ExternalDNS)
 - ✅ Team onboarding (namespace templates with RBAC/quotas/secrets)
 - ✅ Compute configuration (Karpenter NodePool templates)
-- ✅ Security policies (OPA Gatekeeper)
+- ✅ Security policies (pod security, image security, resource governance)
 
 ### 2. Layered Architecture
 
@@ -417,7 +416,6 @@ These blueprints **complement EKS add-ons** rather than replacing them.
 | **KRO** | Template engine for Kubernetes resources | https://kro.run/ |
 | **ACK** | Kubernetes controllers for AWS services | https://aws-controllers-k8s.github.io/community/ |
 | **EKS** | Managed Kubernetes with integrated capabilities | https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html |
-| **ADOT** | OpenTelemetry distribution for AWS | https://aws-otel.github.io/ |
 | **ArgoCD** | GitOps continuous delivery | https://argo-cd.readthedocs.io/ |
 
 ---
