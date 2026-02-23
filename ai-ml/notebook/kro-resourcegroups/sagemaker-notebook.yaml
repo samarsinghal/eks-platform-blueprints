@@ -1,0 +1,87 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: sagemaker-notebook
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: SageMakerNotebook
+    group: ai.company.com
+    spec:
+      teamName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+      notebookName: string | required=true
+      instanceType: string | default="ml.t3.medium"
+      volumeSizeInGB: integer | default=20
+
+  resources:
+    - id: notebookRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.notebookName}-role
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.notebookName}-NotebookRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "sagemaker.amazonaws.com"},
+                "Action": "sts:AssumeRole"
+              }]
+            }
+
+    - id: notebookPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.notebookName}-policy
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.notebookName}-NotebookPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["s3:GetObject","s3:PutObject","s3:ListBucket"],
+                  "Resource": ["arn:aws:s3:::${schema.spec.teamName}-*","arn:aws:s3:::${schema.spec.teamName}-*/*"]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["bedrock:InvokeModel","bedrock:ListFoundationModels"],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],
+                  "Resource": "arn:aws:logs:${schema.spec.region}:${schema.spec.accountID}:log-group:/aws/sagemaker/*"
+                }
+              ]
+            }
+
+    - id: notebook
+      template:
+        apiVersion: sagemaker.services.k8s.aws/v1alpha1
+        kind: NotebookInstance
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.notebookName}
+          namespace: ${schema.spec.teamName}
+        spec:
+          notebookInstanceName: ${schema.spec.teamName}-${schema.spec.notebookName}
+          instanceType: ${schema.spec.instanceType}
+          volumeSizeInGB: ${schema.spec.volumeSizeInGB}
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.teamName}-${schema.spec.notebookName}-NotebookRole
+          directInternetAccess: Enabled
+          rootAccess: Enabled
+          tags:
+            - key: team
+              value: ${schema.spec.teamName}
+            - key: managed-by
+              value: platform

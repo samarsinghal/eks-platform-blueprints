@@ -1,0 +1,99 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: team-storage
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: TeamStorage
+    group: data.company.com
+    spec:
+      teamName: string | required=true
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+      bucketName: string | required=true
+      versioning: boolean | default=true
+      enableEncryption: boolean | default=true
+
+  resources:
+    - id: s3Bucket
+      template:
+        apiVersion: s3.services.k8s.aws/v1alpha1
+        kind: Bucket
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.bucketName}
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.bucketName}
+          tagging:
+            tagSet:
+              - key: team
+                value: ${schema.spec.teamName}
+              - key: managed-by
+                value: platform
+
+    - id: storageAccessPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.bucketName}-policy
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.bucketName}-S3Policy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Action": ["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket","s3:GetBucketLocation"],
+                "Resource": [
+                  "arn:aws:s3:::${schema.spec.teamName}-${schema.spec.bucketName}",
+                  "arn:aws:s3:::${schema.spec.teamName}-${schema.spec.bucketName}/*"
+                ]
+              }]
+            }
+
+    - id: storageAccessRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.bucketName}-role
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.bucketName}-S3Role
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "pods.eks.amazonaws.com"},
+                "Action": ["sts:AssumeRole", "sts:TagSession"]
+              }]
+            }
+
+    - id: storagePodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.bucketName}
+          namespace: ${schema.spec.teamName}
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: ${schema.spec.teamName}
+          serviceAccount: ${schema.spec.teamName}-${schema.spec.bucketName}
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.teamName}-${schema.spec.bucketName}-S3Role
+
+    - id: storageServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.bucketName}
+          namespace: ${schema.spec.teamName}
+          labels:
+            app.kubernetes.io/name: storage-access
+            team: ${schema.spec.teamName}

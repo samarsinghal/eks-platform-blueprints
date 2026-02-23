@@ -1,0 +1,107 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: training-job
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: TrainingJob
+    group: ai.company.com
+    spec:
+      teamName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+      jobName: string | required=true
+      trainingImage: string | required=true
+      trainingDataS3Uri: string | required=true
+      outputS3Uri: string | required=true
+      instanceType: string | default="ml.g5.2xlarge"
+      instanceCount: integer | default=1
+      volumeSizeInGB: integer | default=50
+      maxRuntimeInSeconds: integer | default=86400  # 24 hours
+      enableSpotTraining: boolean | default=false
+
+  resources:
+    - id: trainingRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.jobName}-training-role
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.jobName}-TrainingRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "sagemaker.amazonaws.com"},
+                "Action": "sts:AssumeRole"
+              }]
+            }
+
+    - id: trainingPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.jobName}-training-policy
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.jobName}-TrainingPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["s3:GetObject","s3:PutObject","s3:ListBucket"],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["ecr:GetDownloadUrlForLayer","ecr:BatchGetImage","ecr:GetAuthorizationToken"],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],
+                  "Resource": "arn:aws:logs:${schema.spec.region}:${schema.spec.accountID}:log-group:/aws/sagemaker/*"
+                }
+              ]
+            }
+
+    - id: trainingJob
+      template:
+        apiVersion: sagemaker.services.k8s.aws/v1alpha1
+        kind: TrainingJob
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.jobName}
+          namespace: ${schema.spec.teamName}
+        spec:
+          trainingJobName: ${schema.spec.teamName}-${schema.spec.jobName}
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.teamName}-${schema.spec.jobName}-TrainingRole
+          algorithmSpecification:
+            trainingImage: ${schema.spec.trainingImage}
+            trainingInputMode: File
+          inputDataConfig:
+            - channelName: training
+              dataSource:
+                s3DataSource:
+                  s3DataType: S3Prefix
+                  s3URI: ${schema.spec.trainingDataS3Uri}
+          outputDataConfig:
+            s3OutputPath: ${schema.spec.outputS3Uri}
+          resourceConfig:
+            instanceType: ${schema.spec.instanceType}
+            instanceCount: ${schema.spec.instanceCount}
+            volumeSizeInGB: ${schema.spec.volumeSizeInGB}
+          stoppingCondition:
+            maxRuntimeInSeconds: ${schema.spec.maxRuntimeInSeconds}
+          enableManagedSpotTraining: ${schema.spec.enableSpotTraining}
+          tags:
+            - key: team
+              value: ${schema.spec.teamName}
+            - key: managed-by
+              value: platform

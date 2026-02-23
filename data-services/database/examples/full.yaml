@@ -1,0 +1,16 @@
+apiVersion: data.company.com/v1alpha1
+kind: TeamDatabase
+metadata:
+  name: backend-db
+spec:
+  teamName: backend
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  engine: aurora-postgresql
+  engineVersion: "16.1"
+  instanceClass: db.r6g.large
+  databaseName: appdb
+  enableServerless: true
+  backupRetentionPeriod: 7
+  deletionProtection: true

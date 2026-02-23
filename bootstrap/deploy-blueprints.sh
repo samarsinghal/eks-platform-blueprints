@@ -50,6 +50,26 @@ echo ""
 echo "👥 Tier 3: Team Services"
 kubectl apply -f ../team-services/team-namespace/kro-resourcegroups/
 kubectl apply -f ../team-services/backup-strategy/kro-resourcegroups/
+
+echo ""
+
+# Tier 4: Data Services
+echo "💾 Tier 4: Data Services"
+kubectl apply -f ../data-services/database/kro-resourcegroups/
+kubectl apply -f ../data-services/cache/kro-resourcegroups/
+kubectl apply -f ../data-services/queue/kro-resourcegroups/
+kubectl apply -f ../data-services/storage/kro-resourcegroups/
+
+echo ""
+
+# Tier 5: AI/ML
+echo "🤖 Tier 5: AI/ML"
+kubectl apply -f ../ai-ml/gpu-nodepool/kro-resourcegroups/
+kubectl apply -f ../ai-ml/bedrock-access/kro-resourcegroups/
+kubectl apply -f ../ai-ml/bedrock-agent/kro-resourcegroups/
+kubectl apply -f ../ai-ml/notebook/kro-resourcegroups/
+kubectl apply -f ../ai-ml/sagemaker-endpoint/kro-resourcegroups/
+kubectl apply -f ../ai-ml/training-job/kro-resourcegroups/
 echo ""
 
 # Wait for blueprints to register

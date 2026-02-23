@@ -1,0 +1,76 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: bedrock-agent
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: BedrockAgent
+    group: ai.company.com
+    spec:
+      teamName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+      agentName: string | required=true
+      foundationModel: string | default="anthropic.claude-3-sonnet-20240229-v1:0"
+      instruction: string | required=true
+      description: string | default="Bedrock agent"
+      idleSessionTTLInSeconds: integer | default=600
+
+  resources:
+    - id: agentRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.agentName}-agent-role
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.agentName}-BedrockAgentRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "bedrock.amazonaws.com"},
+                "Action": "sts:AssumeRole",
+                "Condition": {"StringEquals": {"aws:SourceAccount": "${schema.spec.accountID}"}}
+              }]
+            }
+
+    - id: agentPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.agentName}-agent-policy
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.agentName}-BedrockAgentPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Action": ["bedrock:InvokeModel"],
+                "Resource": "arn:aws:bedrock:${schema.spec.region}::foundation-model/${schema.spec.foundationModel}"
+              }]
+            }
+
+    - id: agent
+      template:
+        apiVersion: bedrockagent.services.k8s.aws/v1alpha1
+        kind: Agent
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.agentName}
+          namespace: ${schema.spec.teamName}
+        spec:
+          agentName: ${schema.spec.teamName}-${schema.spec.agentName}
+          foundationModel: ${schema.spec.foundationModel}
+          instruction: ${schema.spec.instruction}
+          description: ${schema.spec.description}
+          idleSessionTTLInSeconds: ${schema.spec.idleSessionTTLInSeconds}
+          agentResourceRoleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.teamName}-${schema.spec.agentName}-BedrockAgentRole
+          tags:
+            team: ${schema.spec.teamName}
+            managed-by: platform

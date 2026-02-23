@@ -1,0 +1,121 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: bedrock-access
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: BedrockAccess
+    group: ai.company.com
+    spec:
+      teamName: string | required=true
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+
+      # Model access
+      foundationModels: string | default="*"  # Comma-separated model IDs or * for all
+
+      # Guardrails
+      enableGuardrails: boolean | default=false
+      guardrailName: string | default=""
+
+      # Budget
+      monthlyBudgetUSD: string | default="0"  # 0 = no limit
+
+  resources:
+    - id: bedrockAccessPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.teamName}-bedrock-policy
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-BedrockAccessPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "BedrockInvoke",
+                  "Effect": "Allow",
+                  "Action": [
+                    "bedrock:InvokeModel",
+                    "bedrock:InvokeModelWithResponseStream",
+                    "bedrock:ListFoundationModels",
+                    "bedrock:GetFoundationModel"
+                  ],
+                  "Resource": "arn:aws:bedrock:${schema.spec.region}::foundation-model/${schema.spec.foundationModels}"
+                },
+                {
+                  "Sid": "BedrockGuardrails",
+                  "Effect": "Allow",
+                  "Action": [
+                    "bedrock:ApplyGuardrail",
+                    "bedrock:GetGuardrail"
+                  ],
+                  "Resource": "arn:aws:bedrock:${schema.spec.region}:${schema.spec.accountID}:guardrail/*"
+                }
+              ]
+            }
+
+    - id: bedrockAccessRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.teamName}-bedrock-role
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-BedrockAccessRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "pods.eks.amazonaws.com"},
+                "Action": ["sts:AssumeRole", "sts:TagSession"]
+              }]
+            }
+
+    - id: bedrockPodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: ${schema.spec.teamName}-bedrock
+          namespace: ${schema.spec.teamName}
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: ${schema.spec.teamName}
+          serviceAccount: ${schema.spec.teamName}-bedrock
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.teamName}-BedrockAccessRole
+
+    - id: bedrockServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: ${schema.spec.teamName}-bedrock
+          namespace: ${schema.spec.teamName}
+          labels:
+            app.kubernetes.io/name: bedrock-access
+            team: ${schema.spec.teamName}
+
+    - id: bedrockConfig
+      template:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: bedrock-config
+          namespace: ${schema.spec.teamName}
+          labels:
+            app.kubernetes.io/name: bedrock-access
+            team: ${schema.spec.teamName}
+        data:
+          region: ${schema.spec.region}
+          foundationModels: ${schema.spec.foundationModels}
+          serviceAccount: ${schema.spec.teamName}-bedrock
+          enableGuardrails: ${string(schema.spec.enableGuardrails)}
+          guardrailName: ${schema.spec.guardrailName}

@@ -216,10 +216,24 @@ eks-platform-blueprints/
 │   │       ├── standard.yaml
 │   │       └── permissive.yaml
 │
-├── team-services/              # Tier 3: Application-level
-│   ├── team-namespace/         # Team onboarding (merged with RBAC)
+├── team-services/              # Tier 3: Team-level
+│   ├── team-namespace/         # Team onboarding with RBAC
 │   ├── github-runner/          # Self-hosted runners
 │   └── backup-strategy/        # Velero backup/DR per cluster
+│
+├── data-services/              # Tier 4: AWS managed data services
+│   ├── database/               # RDS Aurora via ACK
+│   ├── cache/                  # ElastiCache Serverless via ACK
+│   ├── queue/                  # SQS via ACK
+│   └── storage/                # S3 via ACK
+│
+├── ai-ml/                      # Tier 5: AI/ML platform
+│   ├── gpu-nodepool/           # GPU Karpenter NodePools
+│   ├── bedrock-access/         # Bedrock model access + guardrails
+│   ├── bedrock-agent/          # Bedrock agents via ACK
+│   ├── notebook/               # SageMaker notebooks via ACK
+│   ├── sagemaker-endpoint/     # SageMaker inference via ACK
+│   └── training-job/           # SageMaker training via ACK
 │
 ├── modules/                    # Individual modules (advanced users)
 │   ├── observability/          # AMP + AMG + ADOT
@@ -229,8 +243,8 @@ eks-platform-blueprints/
 │   ├── external-secrets/       # Secrets sync
 │   ├── ingress-controller/     # ALB/NLB
 │   ├── centralized-logging/    # CloudWatch/OpenSearch
-│   ├── certificate-manager/   # cert-manager + Let's Encrypt
-│   └── cost-visibility/       # Split cost allocation
+│   ├── certificate-manager/    # cert-manager + Let's Encrypt
+│   └── cost-visibility/        # Split cost allocation
 │
 ├── bootstrap/                  # One-command deployment
 │   ├── deploy-blueprints.sh   # Deploy all templates
@@ -258,6 +272,20 @@ eks-platform-blueprints/
 
 ### Team Services
 - Team Namespace - Team onboarding with RBAC (`team-services/team-namespace/`)
+
+### Data Services
+- Database - Aurora PostgreSQL/MySQL via ACK (`data-services/database/`)
+- Cache - ElastiCache Serverless Redis via ACK (`data-services/cache/`)
+- Queue - SQS via ACK (`data-services/queue/`)
+- Storage - S3 via ACK (`data-services/storage/`)
+
+### AI/ML
+- GPU NodePool - Karpenter GPU pools for Auto Mode (`ai-ml/gpu-nodepool/`)
+- Bedrock Access - Model access with guardrails (`ai-ml/bedrock-access/`)
+- Bedrock Agent - Agents via ACK (`ai-ml/bedrock-agent/`)
+- SageMaker Notebook - Managed notebooks (`ai-ml/notebook/`)
+- SageMaker Endpoint - Model serving (`ai-ml/sagemaker-endpoint/`)
+- Training Job - SageMaker training (`ai-ml/training-job/`)
 - GitHub Runner - Self-hosted CI/CD (`team-services/github-runner/`)
 
 ### Individual Modules (Advanced)
@@ -281,6 +309,10 @@ eks-platform-blueprints/
   - `argo-cd` - GitOps automation
 - **kubectl** configured for your cluster
 - **AWS CLI** with appropriate permissions
+
+For **data-services** blueprints (database, cache, queue, storage), the ACK controller role needs permissions for the corresponding AWS services (RDS, ElastiCache, SQS, S3).
+
+For **ai-ml** blueprints (Bedrock, SageMaker), the ACK controller role needs `bedrock:*` and `sagemaker:*` permissions. Enable the corresponding ACK controllers as EKS capabilities.
 
 Enable capabilities via the EKS console or CLI:
 ```bash

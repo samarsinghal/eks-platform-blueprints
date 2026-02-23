@@ -1,0 +1,139 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: bedrock-knowledge-base
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: BedrockKnowledgeBase
+    group: ai.company.com
+    spec:
+      teamName: string | required=true
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+      knowledgeBaseName: string | required=true
+      s3DataSource: string | required=true  # S3 URI for documents
+      embeddingModel: string | default="amazon.titan-embed-text-v2:0"
+
+  resources:
+    - id: kbDataBucket
+      template:
+        apiVersion: s3.services.k8s.aws/v1alpha1
+        kind: Bucket
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-kb
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-kb
+          tagging:
+            tagSet:
+              - key: team
+                value: ${schema.spec.teamName}
+              - key: purpose
+                value: knowledge-base
+
+    - id: kbRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-kb-role
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-KBRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {"Service": "bedrock.amazonaws.com"},
+                  "Action": "sts:AssumeRole",
+                  "Condition": {"StringEquals": {"aws:SourceAccount": "${schema.spec.accountID}"}}
+                },
+                {
+                  "Effect": "Allow",
+                  "Principal": {"Service": "pods.eks.amazonaws.com"},
+                  "Action": ["sts:AssumeRole", "sts:TagSession"]
+                }
+              ]
+            }
+
+    - id: kbPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-kb-policy
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-KBPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["s3:GetObject","s3:ListBucket"],
+                  "Resource": ["arn:aws:s3:::${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-kb","arn:aws:s3:::${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-kb/*"]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["bedrock:InvokeModel"],
+                  "Resource": "arn:aws:bedrock:${schema.spec.region}::foundation-model/${schema.spec.embeddingModel}"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["bedrock:Retrieve","bedrock:RetrieveAndGenerate","bedrock:ListKnowledgeBases","bedrock:GetKnowledgeBase"],
+                  "Resource": "arn:aws:bedrock:${schema.spec.region}:${schema.spec.accountID}:knowledge-base/*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["aoss:APIAccessAll"],
+                  "Resource": "arn:aws:aoss:${schema.spec.region}:${schema.spec.accountID}:collection/*"
+                }
+              ]
+            }
+
+    - id: kbPodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-kb
+          namespace: ${schema.spec.teamName}
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: ${schema.spec.teamName}
+          serviceAccount: ${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-kb
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-KBRole
+
+    - id: kbServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-kb
+          namespace: ${schema.spec.teamName}
+          labels:
+            app.kubernetes.io/name: knowledge-base
+            team: ${schema.spec.teamName}
+
+    - id: kbConfig
+      template:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: ${schema.spec.knowledgeBaseName}-kb-config
+          namespace: ${schema.spec.teamName}
+          labels:
+            app.kubernetes.io/name: knowledge-base
+            team: ${schema.spec.teamName}
+        data:
+          knowledgeBaseName: ${schema.spec.knowledgeBaseName}
+          s3DataSource: ${schema.spec.s3DataSource}
+          embeddingModel: ${schema.spec.embeddingModel}
+          dataBucket: ${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-kb
+          serviceAccount: ${schema.spec.teamName}-${schema.spec.knowledgeBaseName}-kb
+          region: ${schema.spec.region}

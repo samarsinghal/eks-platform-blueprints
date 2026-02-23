@@ -1,0 +1,12 @@
+apiVersion: platform.company.com/v1alpha1
+kind: TeamECR
+metadata:
+  name: backend-app
+spec:
+  teamName: backend
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  repoName: app
+  imageTagMutability: IMMUTABLE
+  scanOnPush: true

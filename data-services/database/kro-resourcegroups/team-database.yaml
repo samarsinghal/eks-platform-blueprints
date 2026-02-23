@@ -1,0 +1,119 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: team-database
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: TeamDatabase
+    group: data.company.com
+    spec:
+      teamName: string | required=true
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+
+      # Database configuration
+      engine: string | default="aurora-postgresql"
+      engineVersion: string | default="16.1"
+      instanceClass: string | default="db.r6g.large"
+      databaseName: string | default="appdb"
+      masterUsername: string | default="admin"
+      storageEncrypted: boolean | default=true
+      deletionProtection: boolean | default=true
+      backupRetentionPeriod: integer | default=7
+
+  resources:
+    - id: dbAccessPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.teamName}-db-access-policy
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-DatabaseAccessPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["rds-db:connect"],
+                  "Resource": "arn:aws:rds-db:${schema.spec.region}:${schema.spec.accountID}:dbuser:*/${schema.spec.masterUsername}"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["rds:DescribeDBClusters","rds:DescribeDBInstances"],
+                  "Resource": "arn:aws:rds:${schema.spec.region}:${schema.spec.accountID}:cluster:${schema.spec.teamName}-*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["secretsmanager:GetSecretValue"],
+                  "Resource": "arn:aws:secretsmanager:${schema.spec.region}:${schema.spec.accountID}:secret:rds!cluster-*"
+                }
+              ]
+            }
+
+    - id: dbAccessRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.teamName}-db-access-role
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-DatabaseAccessRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "pods.eks.amazonaws.com"},
+                "Action": ["sts:AssumeRole", "sts:TagSession"]
+              }]
+            }
+
+    - id: dbPodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: ${schema.spec.teamName}-db-access
+          namespace: ${schema.spec.teamName}
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: ${schema.spec.teamName}
+          serviceAccount: ${schema.spec.teamName}-db-access
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.teamName}-DatabaseAccessRole
+
+    - id: dbServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: ${schema.spec.teamName}-db-access
+          namespace: ${schema.spec.teamName}
+          labels:
+            app.kubernetes.io/name: database-access
+            team: ${schema.spec.teamName}
+
+    - id: dbConfig
+      template:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: database-config
+          namespace: ${schema.spec.teamName}
+          labels:
+            app.kubernetes.io/name: database
+            team: ${schema.spec.teamName}
+        data:
+          engine: ${schema.spec.engine}
+          engineVersion: ${schema.spec.engineVersion}
+          instanceClass: ${schema.spec.instanceClass}
+          databaseName: ${schema.spec.databaseName}
+          masterUsername: ${schema.spec.masterUsername}
+          serviceAccount: ${schema.spec.teamName}-db-access
+          storageEncrypted: ${string(schema.spec.storageEncrypted)}
+          deletionProtection: ${string(schema.spec.deletionProtection)}

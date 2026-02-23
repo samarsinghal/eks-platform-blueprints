@@ -1,0 +1,12 @@
+apiVersion: ai.company.com/v1alpha1
+kind: BedrockAgent
+metadata:
+  name: support-agent
+spec:
+  teamName: ml-team
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  agentName: support-assistant
+  foundationModel: anthropic.claude-3-sonnet-20240229-v1:0
+  instruction: "You are a customer support assistant. Help users with product questions and troubleshooting."
+  description: "Customer support AI agent"

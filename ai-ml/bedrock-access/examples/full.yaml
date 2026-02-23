@@ -1,0 +1,12 @@
+apiVersion: ai.company.com/v1alpha1
+kind: BedrockAccess
+metadata:
+  name: ml-team-bedrock
+spec:
+  teamName: ml-team
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  foundationModels: "*"
+  enableGuardrails: true
+  guardrailName: content-filter
