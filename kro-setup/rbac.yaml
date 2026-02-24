@@ -25,6 +25,8 @@ rules:
   - ingress.company.com
   - backup.company.com
   - platform.company.com
+  - ai.company.com
+  - data.company.com
   resources:
   - '*'
   verbs:

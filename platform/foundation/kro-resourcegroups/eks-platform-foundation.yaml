@@ -127,6 +127,7 @@ spec:
           namespace: default
         spec:
           nodePoolName: general-purpose
+          nodeClassName: general
           clusterName: ${schema.spec.clusterName}
           capacityType: '${schema.spec.compute.spotEnabled ? "spot" : "on-demand"}'
           architecture: amd64

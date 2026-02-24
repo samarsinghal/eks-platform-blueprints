@@ -1,0 +1,49 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: team-ingress
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: TeamIngress
+    group: platform.company.com
+    spec:
+      teamName: string | required=true
+      serviceName: string | required=true
+      servicePort: integer | default=80
+      hostname: string | required=true
+      path: string | default="/"
+      enableTLS: boolean | default=true
+      certificateArn: string | default=""  # ACM certificate ARN for HTTPS
+      scheme: string | default="internet-facing"  # internet-facing, internal
+
+  resources:
+    - id: ingress
+      template:
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.serviceName}
+          namespace: ${schema.spec.teamName}
+          annotations:
+            alb.ingress.kubernetes.io/scheme: ${schema.spec.scheme}
+            alb.ingress.kubernetes.io/target-type: ip
+            alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+            alb.ingress.kubernetes.io/ssl-redirect: "443"
+            alb.ingress.kubernetes.io/certificate-arn: ${schema.spec.certificateArn}
+          labels:
+            team: ${schema.spec.teamName}
+            managed-by: platform
+        spec:
+          ingressClassName: alb
+          rules:
+            - host: ${schema.spec.hostname}
+              http:
+                paths:
+                  - path: ${schema.spec.path}
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: ${schema.spec.serviceName}
+                        port:
+                          number: ${schema.spec.servicePort}

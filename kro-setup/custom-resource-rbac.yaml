@@ -3,28 +3,26 @@ kind: ClusterRole
 metadata:
   name: kro:controller:custom-resources
 rules:
-  # Platform Foundation resources
+  # Platform resources
   - apiGroups: ["platform.company.com"]
-    resources: ["eksplatformfoundations"]
+    resources: ["*"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["platform.company.com"]
-    resources: ["eksplatformfoundations/status"]
+    resources: ["*/status"]
     verbs: ["get", "update", "patch"]
-  
-  # Platform Security resources
-  - apiGroups: ["platform.company.com"]
-    resources: ["eksplatformsecurities"]
+  # AI/ML resources
+  - apiGroups: ["ai.company.com"]
+    resources: ["*"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["platform.company.com"]
-    resources: ["eksplatformsecurities/status"]
+  - apiGroups: ["ai.company.com"]
+    resources: ["*/status"]
     verbs: ["get", "update", "patch"]
-  
-  # Team Namespace resources
-  - apiGroups: ["platform.company.com"]
-    resources: ["teamnamespaces"]
+  # Data service resources
+  - apiGroups: ["data.company.com"]
+    resources: ["*"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["platform.company.com"]
-    resources: ["teamnamespaces/status"]
+  - apiGroups: ["data.company.com"]
+    resources: ["*/status"]
     verbs: ["get", "update", "patch"]
 
 ---

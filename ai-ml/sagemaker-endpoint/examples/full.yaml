@@ -1,0 +1,13 @@
+apiVersion: ai.company.com/v1alpha1
+kind: SageMakerEndpoint
+metadata:
+  name: fraud-detection
+spec:
+  teamName: ml-team
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  endpointName: fraud-detection
+  modelData: "s3://<YOUR_BUCKET>/models/fraud-v3/model.tar.gz"
+  containerImage: "<YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_AWS_REGION>.amazonaws.com/fraud-model:latest"
+  instanceType: ml.g5.xlarge
+  instanceCount: 2

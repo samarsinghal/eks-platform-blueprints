@@ -1,0 +1,11 @@
+apiVersion: ai.company.com/v1alpha1
+kind: SageMakerNotebook
+metadata:
+  name: ds-notebook
+spec:
+  teamName: ml-team
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  notebookName: exploration
+  instanceType: ml.t3.medium
+  volumeSizeInGB: 50

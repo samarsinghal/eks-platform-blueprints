@@ -1,0 +1,16 @@
+apiVersion: ai.company.com/v1alpha1
+kind: TrainingJob
+metadata:
+  name: fraud-model-training
+spec:
+  teamName: ml-team
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  jobName: fraud-v4
+  trainingImage: "<YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_AWS_REGION>.amazonaws.com/fraud-training:latest"
+  trainingDataS3Uri: "s3://<YOUR_BUCKET>/training-data/fraud/"
+  outputS3Uri: "s3://<YOUR_BUCKET>/models/"
+  instanceType: ml.g5.2xlarge
+  instanceCount: 1
+  volumeSizeInGB: 100
+  enableSpotTraining: true

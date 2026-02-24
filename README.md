@@ -216,10 +216,24 @@ eks-platform-blueprints/
 │   │       ├── standard.yaml
 │   │       └── permissive.yaml
 │
-├── team-services/              # Tier 3: Application-level
-│   ├── team-namespace/         # Team onboarding (merged with RBAC)
+├── team-services/              # Tier 3: Team-level
+│   ├── team-namespace/         # Team onboarding with RBAC
 │   ├── github-runner/          # Self-hosted runners
 │   └── backup-strategy/        # Velero backup/DR per cluster
+│
+├── data-services/              # Tier 4: AWS managed data services
+│   ├── database/               # RDS Aurora via ACK
+│   ├── cache/                  # ElastiCache Serverless via ACK
+│   ├── queue/                  # SQS via ACK
+│   └── storage/                # S3 via ACK
+│
+├── ai-ml/                      # Tier 5: AI/ML platform
+│   ├── gpu-nodepool/           # GPU Karpenter NodePools
+│   ├── bedrock-access/         # Bedrock model access + guardrails
+│   ├── bedrock-agent/          # Bedrock agents via ACK
+│   ├── notebook/               # SageMaker notebooks via ACK
+│   ├── sagemaker-endpoint/     # SageMaker inference via ACK
+│   └── training-job/           # SageMaker training via ACK
 │
 ├── modules/                    # Individual modules (advanced users)
 │   ├── observability/          # AMP + AMG + ADOT
@@ -229,11 +243,12 @@ eks-platform-blueprints/
 │   ├── external-secrets/       # Secrets sync
 │   ├── ingress-controller/     # ALB/NLB
 │   ├── centralized-logging/    # CloudWatch/OpenSearch
-│   ├── certificate-manager/   # cert-manager + Let's Encrypt
-│   └── cost-visibility/       # Split cost allocation
+│   ├── certificate-manager/    # cert-manager + Let's Encrypt
+│   └── cost-visibility/        # Split cost allocation
 │
-├── bootstrap/                  # One-command deployment
-│   ├── deploy-blueprints.sh   # Deploy all templates
+├── bootstrap/                  # Deployment scripts
+│   ├── prerequisites.sh       # Install cert-manager, gatekeeper, OTel operator
+│   ├── deploy-blueprints.sh   # Deploy all templates (non-ArgoCD path)
 │   └── health-check.sh        # Validate platform
 │
 ├── argocd/                     # GitOps automation
@@ -258,6 +273,20 @@ eks-platform-blueprints/
 
 ### Team Services
 - Team Namespace - Team onboarding with RBAC (`team-services/team-namespace/`)
+
+### Data Services
+- Database - Aurora PostgreSQL/MySQL via ACK (`data-services/database/`)
+- Cache - ElastiCache Serverless Redis via ACK (`data-services/cache/`)
+- Queue - SQS via ACK (`data-services/queue/`)
+- Storage - S3 via ACK (`data-services/storage/`)
+
+### AI/ML
+- GPU NodePool - Karpenter GPU pools for Auto Mode (`ai-ml/gpu-nodepool/`)
+- Bedrock Access - Model access with guardrails (`ai-ml/bedrock-access/`)
+- Bedrock Agent - Agents via ACK (`ai-ml/bedrock-agent/`)
+- SageMaker Notebook - Managed notebooks (`ai-ml/notebook/`)
+- SageMaker Endpoint - Model serving (`ai-ml/sagemaker-endpoint/`)
+- Training Job - SageMaker training (`ai-ml/training-job/`)
 - GitHub Runner - Self-hosted CI/CD (`team-services/github-runner/`)
 
 ### Individual Modules (Advanced)
@@ -274,27 +303,90 @@ eks-platform-blueprints/
 
 ## Prerequisites
 
-- **Amazon EKS Auto Mode cluster** (version 1.28+)
+- **Amazon EKS Auto Mode cluster** (version 1.28+) with built-in NodePools enabled:
+  ```bash
+  aws eks update-cluster-config --name <cluster> \
+    --compute-config '{"nodePools":["general-purpose","system"],"enabled":true,"nodeRoleArn":"<node-role-arn>"}' \
+    --kubernetes-network-config '{"elasticLoadBalancing":{"enabled":true}}' \
+    --storage-config '{"blockStorage":{"enabled":true}}'
+  ```
 - **EKS Capabilities** enabled:
   - `kro` - Kubernetes Resource Orchestrator
   - `ack` - AWS Controllers for Kubernetes (IAM, EKS, Prometheus Service)
-  - `argo-cd` - GitOps automation
+  - `argo-cd` - GitOps automation (optional, for GitOps deployment)
 - **kubectl** configured for your cluster
 - **AWS CLI** with appropriate permissions
 
-Enable capabilities via the EKS console or CLI:
+### Platform Prerequisites (installed by `bootstrap/prerequisites.sh`)
+
+These are installed automatically by the prerequisites script:
+
+| Component | Purpose | Required by |
+|-----------|---------|-------------|
+| **cert-manager** | TLS certificate management | Certificate Manager module, OTel Operator |
+| **OPA Gatekeeper** | Policy enforcement | Platform Security blueprint |
+| **OpenTelemetry Operator** | Collector management | Observability module |
+
 ```bash
-aws eks update-cluster-config --name <cluster> \
-  --compute-config enabled=true \
-  --kubernetes-network-config '{"elasticLoadBalancing":{"enabled":true}}' \
-  --storage-config '{"blockStorage":{"enabled":true}}'
+cd bootstrap
+./prerequisites.sh
 ```
+
+For **data-services** blueprints (database, cache, queue, storage), the ACK controller role needs permissions for the corresponding AWS services (RDS, ElastiCache, SQS, S3).
+
+For **ai-ml** blueprints (Bedrock, SageMaker), the ACK controller role needs `bedrock:*` and `sagemaker:*` permissions.
 
 ---
 
 ## Deployment Options
 
-### Option 1: Automated Bootstrap (Recommended)
+### Option 1: GitOps with ArgoCD (Recommended)
+
+This project uses a **two-repo pattern**:
+
+| Repo | Visibility | Contents | Example |
+|------|-----------|----------|---------|
+| **Blueprints repo** (this repo) | Public | KRO templates, modules, RBAC | `eks-platform-blueprints` |
+| **Config repo** | **Private** | Cluster-specific values, team configs, ArgoCD apps | `eks-platform-config` |
+
+> **⚠️ Important**: The config repo contains environment-specific values (AWS account IDs, AMP workspace IDs, hosted zone IDs, team names). Keep it in a **private repository** Keep it in a **private repository** — never in a public repo.
+
+The config repo structure:
+```
+eks-platform-config/          # PRIVATE
+├── platform/
+│   ├── foundation.yaml       # Cluster infra values (account ID, region, AMP workspace)
+│   └── security.yaml         # Security baseline values
+├── teams/
+│   ├── backend-team.yaml     # Team namespace config
+│   └── ml-team.yaml
+├── data-services/
+│   ├── backend-db.yaml       # Database config
+│   └── backend-cache.yaml
+├── ai-ml/
+│   └── ml-platform.yaml      # AI/ML config
+└── argocd/
+    ├── blueprints-app.yaml   # Points to THIS (public) repo for templates
+    └── root-app.yaml         # Points to config (private) repo for values
+```
+
+```bash
+# 1. Install prerequisites
+cd bootstrap
+./prerequisites.sh
+
+# 2. Deploy ArgoCD apps from the private config repo
+kubectl apply -f <config-repo>/argocd/blueprints-app.yaml  # Syncs templates from public repo
+kubectl apply -f <config-repo>/argocd/root-app.yaml         # Syncs values from private repo
+```
+
+ArgoCD automatically deploys and keeps everything in sync:
+- Blueprint templates from the public blueprints repo
+- Platform instances from the private config repo
+- RBAC from `kro-setup/`
+- No credentials stored in the cluster
+
+### Option 2: Automated Bootstrap (without ArgoCD)
 
 ```bash
 cd bootstrap
@@ -302,42 +394,39 @@ cd bootstrap
 ```
 
 **What it does**:
-1. Configures KRO RBAC
-2. Deploys all blueprint templates
-3. Ready for platform instances
+1. Installs prerequisites (cert-manager, gatekeeper, OTel operator)
+2. Configures KRO RBAC
+3. Deploys all blueprint templates (Tier 1-5)
+4. Ready for platform instances
 
-**Time**: ~2 minutes
+**Time**: ~3 minutes
 
-### Option 2: Manual Step-by-Step
+### Option 3: Manual Step-by-Step
 
 ```bash
-# 1. KRO Setup (one-time)
-kubectl apply -f kro-setup/rbac.yaml
-kubectl rollout restart deployment -n kro-system kro
+# 1. Prerequisites
+cd bootstrap && ./prerequisites.sh
 
-# 2. Deploy platform templates
+# 2. KRO RBAC
+kubectl apply -f kro-setup/
+
+# 3. Deploy module + platform templates
+kubectl apply -f modules/observability/kro-resourcegroups/
+kubectl apply -f modules/external-dns/kro-resourcegroups/
+kubectl apply -f modules/karpenter/kro-resourcegroups/
+kubectl apply -f modules/metrics-server/kro-resourcegroups/
+kubectl apply -f modules/external-secrets/kro-resourcegroups/
+kubectl apply -f modules/centralized-logging/kro-resourcegroups/
 kubectl apply -f platform/foundation/kro-resourcegroups/
 kubectl apply -f platform/security/kro-resourcegroups/
 kubectl apply -f team-services/team-namespace/kro-resourcegroups/
 
-# 3. Deploy platform instances
+# 4. Deploy platform instances
 kubectl apply -f platform/foundation/examples/full.yaml
 kubectl apply -f platform/security/examples/restricted.yaml
 
-# 4. Onboard teams
+# 5. Onboard teams
 kubectl apply -f team-services/team-namespace/examples/backend-team.yaml
-```
-
-### Option 3: GitOps with ArgoCD
-
-```bash
-# Deploy root application (App of Apps pattern)
-kubectl apply -f argocd/root-app.yaml
-
-# ArgoCD automatically deploys:
-# - Platform foundation
-# - Platform security
-# - Team namespaces
 ```
 
 ---

@@ -1,0 +1,123 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: sagemaker-endpoint
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: SageMakerEndpoint
+    group: ai.company.com
+    spec:
+      teamName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+      endpointName: string | required=true
+      modelData: string | required=true  # S3 URI to model artifacts
+      containerImage: string | required=true  # ECR image for inference
+      instanceType: string | default="ml.g5.xlarge"
+      instanceCount: integer | default=1
+
+  resources:
+    - id: endpointRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.endpointName}-role
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.endpointName}-EndpointRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "sagemaker.amazonaws.com"},
+                "Action": "sts:AssumeRole"
+              }]
+            }
+
+    - id: endpointPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.endpointName}-policy
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.endpointName}-EndpointPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["s3:GetObject","s3:ListBucket"],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["ecr:GetDownloadUrlForLayer","ecr:BatchGetImage","ecr:GetAuthorizationToken"],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],
+                  "Resource": "arn:aws:logs:${schema.spec.region}:${schema.spec.accountID}:log-group:/aws/sagemaker/*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["cloudwatch:PutMetricData"],
+                  "Resource": "*"
+                }
+              ]
+            }
+
+    - id: model
+      template:
+        apiVersion: sagemaker.services.k8s.aws/v1alpha1
+        kind: Model
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.endpointName}-model
+          namespace: ${schema.spec.teamName}
+        spec:
+          modelName: ${schema.spec.teamName}-${schema.spec.endpointName}
+          executionRoleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.teamName}-${schema.spec.endpointName}-EndpointRole
+          primaryContainer:
+            image: ${schema.spec.containerImage}
+            modelDataURL: ${schema.spec.modelData}
+          tags:
+            - key: team
+              value: ${schema.spec.teamName}
+
+    - id: endpointConfig
+      template:
+        apiVersion: sagemaker.services.k8s.aws/v1alpha1
+        kind: EndpointConfig
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.endpointName}-config
+          namespace: ${schema.spec.teamName}
+        spec:
+          endpointConfigName: ${schema.spec.teamName}-${schema.spec.endpointName}
+          productionVariants:
+            - variantName: primary
+              modelName: ${schema.spec.teamName}-${schema.spec.endpointName}
+              instanceType: ${schema.spec.instanceType}
+              initialInstanceCount: ${schema.spec.instanceCount}
+          tags:
+            - key: team
+              value: ${schema.spec.teamName}
+
+    - id: endpoint
+      template:
+        apiVersion: sagemaker.services.k8s.aws/v1alpha1
+        kind: Endpoint
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.endpointName}
+          namespace: ${schema.spec.teamName}
+        spec:
+          endpointName: ${schema.spec.teamName}-${schema.spec.endpointName}
+          endpointConfigName: ${schema.spec.teamName}-${schema.spec.endpointName}
+          tags:
+            - key: team
+              value: ${schema.spec.teamName}

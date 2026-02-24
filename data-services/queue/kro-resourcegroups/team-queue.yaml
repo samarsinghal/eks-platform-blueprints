@@ -1,0 +1,98 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: team-queue
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: TeamQueue
+    group: data.company.com
+    spec:
+      teamName: string | required=true
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+      queueName: string | required=true
+      fifoQueue: boolean | default=false
+      visibilityTimeout: string | default="30"
+      messageRetentionPeriod: string | default="345600"  # 4 days
+      enableEncryption: boolean | default=true
+
+  resources:
+    - id: sqsQueue
+      template:
+        apiVersion: sqs.services.k8s.aws/v1alpha1
+        kind: Queue
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.queueName}
+          namespace: ${schema.spec.teamName}
+        spec:
+          queueName: ${schema.spec.teamName}-${schema.spec.queueName}
+          visibilityTimeout: ${schema.spec.visibilityTimeout}
+          messageRetentionPeriod: ${schema.spec.messageRetentionPeriod}
+          sqsManagedSSEEnabled: ${string(schema.spec.enableEncryption)}
+          tags:
+            team: ${schema.spec.teamName}
+            managed-by: platform
+
+    - id: queueAccessPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.queueName}-policy
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.queueName}-QueuePolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Action": ["sqs:SendMessage","sqs:ReceiveMessage","sqs:DeleteMessage","sqs:GetQueueAttributes","sqs:GetQueueUrl"],
+                "Resource": "arn:aws:sqs:${schema.spec.region}:${schema.spec.accountID}:${schema.spec.teamName}-${schema.spec.queueName}"
+              }]
+            }
+
+    - id: queueAccessRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.queueName}-role
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.queueName}-QueueRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "pods.eks.amazonaws.com"},
+                "Action": ["sts:AssumeRole", "sts:TagSession"]
+              }]
+            }
+
+    - id: queuePodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.queueName}
+          namespace: ${schema.spec.teamName}
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: ${schema.spec.teamName}
+          serviceAccount: ${schema.spec.teamName}-${schema.spec.queueName}
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.teamName}-${schema.spec.queueName}-QueueRole
+
+    - id: queueServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.queueName}
+          namespace: ${schema.spec.teamName}
+          labels:
+            app.kubernetes.io/name: queue-access
+            team: ${schema.spec.teamName}

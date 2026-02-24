@@ -1,0 +1,12 @@
+apiVersion: ai.company.com/v1alpha1
+kind: GPUNodePool
+metadata:
+  name: gpu-inference
+spec:
+  clusterName: <YOUR_CLUSTER_NAME>
+  nodePoolName: gpu-inference
+  acceleratorType: nvidia-gpu
+  capacityType: on-demand
+  cpuLimit: "100"
+  memoryLimit: "400Gi"
+  gpuLimit: "8"

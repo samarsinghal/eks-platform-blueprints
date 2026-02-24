@@ -14,6 +14,14 @@ spec:
       ampRemoteWriteEndpoint: string | required=true
       accountID: string | required=true
   resources:
+    # Namespace
+    - id: observabilityNamespace
+      template:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: observability-system
+
     # ServiceAccount - No IRSA annotations (using Pod Identity instead)
     - id: adotServiceAccount
       template:
@@ -158,7 +166,7 @@ spec:
         spec:
           mode: daemonset
           serviceAccount: adot-collector
-          image: public.ecr.aws/aws-observability/aws-otel-collector:latest
+          image: public.ecr.aws/aws-observability/aws-otel-collector:v0.41.1
           config:
             receivers:
               prometheus:
@@ -273,6 +281,9 @@ spec:
                 service: aps
             
             service:
+              telemetry:
+                metrics:
+                  level: none
               extensions: [sigv4auth]
               pipelines:
                 metrics:

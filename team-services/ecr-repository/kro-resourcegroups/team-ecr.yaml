@@ -1,0 +1,106 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: team-ecr
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: TeamECR
+    group: platform.company.com
+    spec:
+      teamName: string | required=true
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+      repoName: string | required=true
+      imageTagMutability: string | default="IMMUTABLE"  # MUTABLE, IMMUTABLE
+      scanOnPush: boolean | default=true
+      maxImageCount: integer | default=50
+
+  resources:
+    - id: ecrRepository
+      template:
+        apiVersion: ecr.services.k8s.aws/v1alpha1
+        kind: Repository
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.repoName}
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.repoName}
+          imageTagMutability: ${schema.spec.imageTagMutability}
+          imageScanningConfiguration:
+            scanOnPush: ${schema.spec.scanOnPush}
+          tags:
+            - key: team
+              value: ${schema.spec.teamName}
+            - key: managed-by
+              value: platform
+
+    - id: ecrAccessPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.repoName}-ecr-policy
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.repoName}-ECRPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["ecr:GetDownloadUrlForLayer","ecr:BatchGetImage","ecr:BatchCheckLayerAvailability","ecr:PutImage","ecr:InitiateLayerUpload","ecr:UploadLayerPart","ecr:CompleteLayerUpload","ecr:DescribeImages","ecr:ListImages"],
+                  "Resource": "arn:aws:ecr:${schema.spec.region}:${schema.spec.accountID}:repository/${schema.spec.teamName}-${schema.spec.repoName}"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["ecr:GetAuthorizationToken"],
+                  "Resource": "*"
+                }
+              ]
+            }
+
+    - id: ecrAccessRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.repoName}-ecr-role
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-${schema.spec.repoName}-ECRRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "pods.eks.amazonaws.com"},
+                "Action": ["sts:AssumeRole", "sts:TagSession"]
+              }]
+            }
+
+    - id: ecrPodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.repoName}-ecr
+          namespace: ${schema.spec.teamName}
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: ${schema.spec.teamName}
+          serviceAccount: ${schema.spec.teamName}-${schema.spec.repoName}-ecr
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.teamName}-${schema.spec.repoName}-ECRRole
+
+    - id: ecrServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: ${schema.spec.teamName}-${schema.spec.repoName}-ecr
+          namespace: ${schema.spec.teamName}
+          labels:
+            app.kubernetes.io/name: ecr-access
+            team: ${schema.spec.teamName}

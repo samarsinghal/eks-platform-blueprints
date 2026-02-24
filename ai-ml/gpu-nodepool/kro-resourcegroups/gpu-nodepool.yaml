@@ -1,33 +1,24 @@
 apiVersion: kro.run/v1alpha1
 kind: ResourceGraphDefinition
 metadata:
-  name: karpenter-nodepool
+  name: gpu-nodepool
 spec:
   schema:
     apiVersion: v1alpha1
-    kind: KarpenterNodePool
-    group: karpenter.company.com
+    kind: GPUNodePool
+    group: ai.company.com
     spec:
-      # Core Configuration
-      nodePoolName: string | required=true
       clusterName: string | required=true
-
-      # Instance Configuration
-      capacityType: string | default="spot"  # spot, on-demand
-      architecture: string | default="amd64"  # amd64, arm64
-      cpuLimit: string | default="1000"
-      memoryLimit: string | default="1000Gi"
-
-      # NodeClass
-      nodeClassName: string | default="general"  # general, gpu, neuron
-
-      # Disruption
-      consolidationPolicy: string | default="WhenEmptyOrUnderutilized"  # WhenEmpty, WhenEmptyOrUnderutilized
-      expireAfter: string | default="720h"
+      nodePoolName: string | default="gpu-general"
+      acceleratorType: string | default="nvidia-gpu"  # nvidia-gpu, aws-neuron
+      capacityType: string | default="on-demand"  # on-demand, spot
+      cpuLimit: string | default="100"
+      memoryLimit: string | default="400Gi"
+      gpuLimit: string | default="8"
+      nodeClassName: string | default="gpu"  # general, gpu, neuron
 
   resources:
-    # NodePool - EKS Auto Mode manages EC2NodeClass/IAM/NTH automatically
-    - id: karpenterNodePool
+    - id: gpuNodePool
       template:
         apiVersion: karpenter.sh/v1
         kind: NodePool
@@ -38,6 +29,7 @@ spec:
             metadata:
               labels:
                 nodepool: ${schema.spec.nodePoolName}
+                accelerator: ${schema.spec.acceleratorType}
             spec:
               requirements:
                 - key: karpenter.sh/capacity-type
@@ -47,16 +39,20 @@ spec:
                 - key: kubernetes.io/arch
                   operator: In
                   values:
-                    - ${schema.spec.architecture}
+                    - amd64
               nodeClassRef:
                 group: eks.amazonaws.com
                 kind: NodeClass
                 name: ${schema.spec.nodeClassName}
+              taints:
+                - key: nvidia.com/gpu
+                  value: "true"
+                  effect: NoSchedule
           limits:
             cpu: ${schema.spec.cpuLimit}
             memory: ${schema.spec.memoryLimit}
           disruption:
-            consolidationPolicy: ${schema.spec.consolidationPolicy}
+            consolidationPolicy: WhenEmpty
             consolidateAfter: 30s
             budgets:
-              - nodes: "10%"
+              - nodes: "0"

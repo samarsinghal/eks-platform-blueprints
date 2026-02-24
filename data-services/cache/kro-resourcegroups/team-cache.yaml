@@ -1,0 +1,92 @@
+apiVersion: kro.run/v1alpha1
+kind: ResourceGraphDefinition
+metadata:
+  name: team-cache
+spec:
+  schema:
+    apiVersion: v1alpha1
+    kind: TeamCache
+    group: data.company.com
+    spec:
+      teamName: string | required=true
+      clusterName: string | required=true
+      region: string | required=true
+      accountID: string | required=true
+      engine: string | default="redis"
+
+  resources:
+    - id: cacheAccessPolicy
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Policy
+        metadata:
+          name: ${schema.spec.teamName}-cache-policy
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-CacheAccessPolicy
+          policyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Action": ["elasticache:Connect","elasticache:DescribeServerlessCaches"],
+                "Resource": "arn:aws:elasticache:${schema.spec.region}:${schema.spec.accountID}:serverlesscache:${schema.spec.teamName}-*"
+              }]
+            }
+
+    - id: cacheAccessRole
+      template:
+        apiVersion: iam.services.k8s.aws/v1alpha1
+        kind: Role
+        metadata:
+          name: ${schema.spec.teamName}-cache-role
+          namespace: ${schema.spec.teamName}
+        spec:
+          name: ${schema.spec.teamName}-CacheAccessRole
+          assumeRolePolicyDocument: |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "pods.eks.amazonaws.com"},
+                "Action": ["sts:AssumeRole", "sts:TagSession"]
+              }]
+            }
+
+    - id: cachePodIdentity
+      template:
+        apiVersion: eks.services.k8s.aws/v1alpha1
+        kind: PodIdentityAssociation
+        metadata:
+          name: ${schema.spec.teamName}-cache-access
+          namespace: ${schema.spec.teamName}
+        spec:
+          clusterName: ${schema.spec.clusterName}
+          namespace: ${schema.spec.teamName}
+          serviceAccount: ${schema.spec.teamName}-cache-access
+          roleARN: arn:aws:iam::${schema.spec.accountID}:role/${schema.spec.teamName}-CacheAccessRole
+
+    - id: cacheServiceAccount
+      template:
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: ${schema.spec.teamName}-cache-access
+          namespace: ${schema.spec.teamName}
+          labels:
+            app.kubernetes.io/name: cache-access
+            team: ${schema.spec.teamName}
+
+    - id: cacheConfig
+      template:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: cache-config
+          namespace: ${schema.spec.teamName}
+          labels:
+            app.kubernetes.io/name: cache
+            team: ${schema.spec.teamName}
+        data:
+          engine: ${schema.spec.engine}
+          serviceAccount: ${schema.spec.teamName}-cache-access

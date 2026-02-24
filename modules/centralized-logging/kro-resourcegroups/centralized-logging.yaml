@@ -17,7 +17,7 @@ spec:
       loggingNamespace: string | default="amazon-cloudwatch"
       logDestination: string | default="cloudwatch"  # cloudwatch, s3, or both
       cloudWatchLogGroup: string  # Auto-generated if empty
-      s3BucketName: string  # Required if logDestination includes s3
+      s3BucketName: string | default=""  # Required if logDestination includes s3
 
       # Log Types
       enableApplicationLogs: boolean | default=true
@@ -40,7 +40,7 @@ spec:
         apiVersion: v1
         kind: Namespace
         metadata:
-          name: "{{ .spec.loggingNamespace }}"
+          name: "${schema.spec.loggingNamespace}"
           labels:
             app.kubernetes.io/name: fluent-bit
 
@@ -51,7 +51,7 @@ spec:
         kind: ServiceAccount
         metadata:
           name: fluent-bit
-          namespace: "{{ .spec.loggingNamespace }}"
+          namespace: "${schema.spec.loggingNamespace}"
 
     # IAM Policy
     - id: fluentBitIAMPolicy
@@ -60,7 +60,7 @@ spec:
         kind: Policy
         metadata:
           name: fluent-bit-policy
-          namespace: "{{ .spec.loggingNamespace }}"
+          namespace: "${schema.spec.loggingNamespace}"
         spec:
           name: "${schema.spec.clusterName}-fluent-bit-policy"
           description: "IAM policy for Fluent Bit logging"
@@ -101,7 +101,7 @@ spec:
         kind: Role
         metadata:
           name: fluent-bit-role
-          namespace: "{{ .spec.loggingNamespace }}"
+          namespace: "${schema.spec.loggingNamespace}"
         spec:
           name: "${schema.spec.clusterName}-fluent-bit-role"
           description: "IAM role for Fluent Bit"
@@ -128,10 +128,10 @@ spec:
         kind: PodIdentityAssociation
         metadata:
           name: fluent-bit-identity
-          namespace: "{{ .spec.loggingNamespace }}"
+          namespace: "${schema.spec.loggingNamespace}"
         spec:
           clusterName: ${schema.spec.clusterName}
-          namespace: "{{ .spec.loggingNamespace }}"
+          namespace: "${schema.spec.loggingNamespace}"
           serviceAccount: fluent-bit
           roleARN: "$resource: fluentBitIAMRole.status.ackResourceMetadata.arn"
 
@@ -142,7 +142,7 @@ spec:
         kind: ConfigMap
         metadata:
           name: fluent-bit-config
-          namespace: "{{ .spec.loggingNamespace }}"
+          namespace: "${schema.spec.loggingNamespace}"
         data:
           fluent-bit.conf: |
             [SERVICE]
@@ -174,10 +174,10 @@ spec:
                 Name                cloudwatch_logs
                 Match               *
                 region              ${schema.spec.region}
-                log_group_name      {{ if .spec.cloudWatchLogGroup }}{{ .spec.cloudWatchLogGroup }}{{ else }}/aws/eks/${schema.spec.clusterName}/logs{{ end }}
+                log_group_name      ${schema.spec.cloudWatchLogGroup}
                 log_stream_prefix   eks-
                 auto_create_group   true
-                retention_in_days   ${string(schema.spec.logRetentionDays)}
+                log_retention_days  ${string(schema.spec.logRetentionDays)}
 
     # DaemonSet
     - id: fluentBitDaemonSet
@@ -186,7 +186,7 @@ spec:
         kind: DaemonSet
         metadata:
           name: fluent-bit
-          namespace: "{{ .spec.loggingNamespace }}"
+          namespace: "${schema.spec.loggingNamespace}"
           labels:
             app.kubernetes.io/name: fluent-bit
         spec:

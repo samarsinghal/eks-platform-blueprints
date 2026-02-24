@@ -1,0 +1,12 @@
+apiVersion: ai.company.com/v1alpha1
+kind: BedrockKnowledgeBase
+metadata:
+  name: product-docs
+spec:
+  teamName: ml-team
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  knowledgeBaseName: product-docs
+  s3DataSource: "s3://ml-team-product-docs-kb/"
+  embeddingModel: amazon.titan-embed-text-v2:0

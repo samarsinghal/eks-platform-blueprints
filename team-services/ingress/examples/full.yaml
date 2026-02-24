@@ -1,0 +1,13 @@
+apiVersion: platform.company.com/v1alpha1
+kind: TeamIngress
+metadata:
+  name: backend-api
+spec:
+  teamName: backend
+  serviceName: api
+  servicePort: 8080
+  hostname: api.backend.<YOUR_DOMAIN>
+  path: /
+  enableTLS: true
+  certificateArn: <YOUR_ACM_CERTIFICATE_ARN>
+  scheme: internet-facing

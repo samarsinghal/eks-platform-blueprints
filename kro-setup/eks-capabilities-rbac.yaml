@@ -1,0 +1,105 @@
+---
+# RBAC for EKS Capabilities user (capabilities.eks.amazonaws.com)
+# Grants access to custom API groups and ACK resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: eks-capabilities-kro-access
+rules:
+# Custom platform API groups
+- apiGroups:
+  - observability.company.com
+  - metrics.company.com
+  - externaldns.company.com
+  - secrets.company.com
+  - karpenter.company.com
+  - security.company.com
+  - namespace.company.com
+  - rbac.company.com
+  - cicd.company.com
+  - logging.company.com
+  - ingress.company.com
+  - backup.company.com
+  - platform.company.com
+  - ai.company.com
+  - data.company.com
+  resources: ['*']
+  verbs: ['*']
+# KRO
+- apiGroups: [kro.run]
+  resources: [resourcegraphdefinitions, resourcegraphdefinitions/status]
+  verbs: ['*']
+# Core
+- apiGroups: ['']
+  resources: ['*']
+  verbs: ['*']
+# Standard K8s + third-party controllers
+- apiGroups:
+  - apps
+  - batch
+  - networking.k8s.io
+  - policy
+  - rbac.authorization.k8s.io
+  - apiregistration.k8s.io
+  - secrets-store.csi.x-k8s.io
+  - actions.github.com
+  - templates.gatekeeper.sh
+  - constraints.gatekeeper.sh
+  - velero.io
+  - karpenter.sh
+  - externaldns.k8s.io
+  - external-secrets.io
+  - opentelemetry.io
+  - elbv2.k8s.aws
+  resources: ['*']
+  verbs: ['*']
+# ACK controllers (all AWS service API groups)
+- apiGroups:
+  - acm.services.k8s.aws
+  - apigateway.services.k8s.aws
+  - apigatewayv2.services.k8s.aws
+  - applicationautoscaling.services.k8s.aws
+  - bedrock.services.k8s.aws
+  - bedrockagent.services.k8s.aws
+  - bedrockagentcorecontrol.services.k8s.aws
+  - cloudfront.services.k8s.aws
+  - cloudtrail.services.k8s.aws
+  - cloudwatch.services.k8s.aws
+  - cloudwatchlogs.services.k8s.aws
+  - dynamodb.services.k8s.aws
+  - ec2.services.k8s.aws
+  - ecr.services.k8s.aws
+  - ecs.services.k8s.aws
+  - efs.services.k8s.aws
+  - eks.services.k8s.aws
+  - elasticache.services.k8s.aws
+  - elbv2.services.k8s.aws
+  - eventbridge.services.k8s.aws
+  - iam.services.k8s.aws
+  - kafka.services.k8s.aws
+  - kms.services.k8s.aws
+  - lambda.services.k8s.aws
+  - opensearchservice.services.k8s.aws
+  - prometheusservice.services.k8s.aws
+  - rds.services.k8s.aws
+  - route53.services.k8s.aws
+  - s3.services.k8s.aws
+  - sagemaker.services.k8s.aws
+  - secretsmanager.services.k8s.aws
+  - sns.services.k8s.aws
+  - sqs.services.k8s.aws
+  resources: ['*']
+  verbs: ['*']
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eks-capabilities-kro-access
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: eks-capabilities-kro-access
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: capabilities.eks.amazonaws.com

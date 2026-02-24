@@ -1,0 +1,12 @@
+apiVersion: data.company.com/v1alpha1
+kind: TeamStorage
+metadata:
+  name: backend-assets
+spec:
+  teamName: backend
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  bucketName: assets
+  versioning: true
+  enableEncryption: true
