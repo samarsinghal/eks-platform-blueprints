@@ -1,0 +1,26 @@
+apiVersion: platform.company.com/v1alpha1
+kind: EKSPlatformSecurity
+metadata:
+  name: production
+spec:
+  clusterName: <YOUR_CLUSTER_NAME>  # e.g., production-cluster
+  securityProfile: restricted
+  policyEnforcement:
+    mode: deny
+  podSecurity:
+    enabled: true
+    defaultLevel: restricted
+  imageSecurity:
+    enableAllowlist: true
+    allowedRegistries: "<YOUR_AWS_ACCOUNT_ID>.dkr.ecr.<YOUR_AWS_REGION>.amazonaws.com,public.ecr.aws"  # e.g., "123456789012.dkr.ecr.us-east-1.amazonaws.com,public.ecr.aws"
+    blockLatestTag: true
+  resourceGovernance:
+    enforceResourceLimits: true
+    enforceRequiredLabels: true
+    requiredLabels: "team,environment,cost-center"
+  networkPolicies:
+    defaultDenyIngress: true
+  rbac:
+    enabled: true
+    enableClusterViewerRole: true
+    auditClusterAdmin: true

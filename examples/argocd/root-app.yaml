@@ -1,0 +1,50 @@
+# Deploys actual configurations from YOUR PRIVATE config repo
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  sources:
+    # Platform foundation + security
+    - repoURL: <YOUR_CONFIG_REPO_URL>  # e.g., https://git-codecommit.us-east-1.amazonaws.com/v1/repos/eks-platform-config
+      targetRevision: main
+      path: platform
+    # Team namespaces
+    - repoURL: <YOUR_CONFIG_REPO_URL>
+      targetRevision: main
+      path: teams
+    # Data services
+    - repoURL: <YOUR_CONFIG_REPO_URL>
+      targetRevision: main
+      path: data-services
+    # AI/ML
+    - repoURL: <YOUR_CONFIG_REPO_URL>
+      targetRevision: main
+      path: ai-ml
+  destination:
+    server: <YOUR_CLUSTER_ARN>  # e.g., arn:aws:eks:us-east-1:123456789012:cluster/my-cluster
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+  ignoreDifferences:
+    - group: platform.company.com
+      kind: "*"
+      jsonPointers: [/status]
+    - group: data.company.com
+      kind: "*"
+      jsonPointers: [/status]
+    - group: ai.company.com
+      kind: "*"
+      jsonPointers: [/status]

@@ -1,0 +1,58 @@
+# Placeholders Reference
+
+This file lists all placeholders that need to be replaced with actual values.
+
+## Required Replacements
+
+### AWS Infrastructure
+- <YOUR_CLUSTER_NAME>              # EKS cluster name
+- <YOUR_AWS_REGION>                # AWS region (e.g., us-east-1)
+- <YOUR_AWS_ACCOUNT_ID>            # AWS account ID (12 digits)
+- <YOUR_CLUSTER_ARN>               # Full EKS cluster ARN
+
+### Observability
+- <YOUR_AMP_WORKSPACE_ID>          # Amazon Managed Prometheus workspace ID
+- <YOUR_AMP_REMOTE_WRITE_ENDPOINT> # AMP remote write endpoint URL
+
+### DNS
+- <YOUR_HOSTED_ZONE_ID>            # Route53 hosted zone ID
+- <YOUR_DOMAIN>                    # Domain name for DNS records
+
+### Users
+- <ADMIN_USER_EMAIL>               # Admin user email address
+- <DEV_USER_1_EMAIL>               # Developer user 1 email
+- <DEV_USER_2_EMAIL>               # Developer user 2 email
+
+### Storage
+- <YOUR_S3_BUCKET_URI>             # S3 bucket URI (s3://bucket-name/path/)
+
+### Git Repositories
+- <YOUR_BLUEPRINTS_REPO_URL>       # Public blueprints repository URL
+- <YOUR_CONFIG_REPO_URL>           # Private config repository URL
+
+## Files Containing Placeholders
+
+- argocd/blueprints-app.yaml
+- argocd/root-app.yaml
+- platform/foundation.yaml
+- platform/security.yaml
+- teams/backend-team.yaml
+- teams/ml-team.yaml
+- data-services/backend-db.yaml
+- data-services/backend-cache-queue.yaml
+- ai-ml/ml-platform.yaml
+
+## Quick Replace Script
+
+```bash
+# Set your values
+CLUSTER_NAME="production-cluster"
+AWS_REGION="us-east-1"
+AWS_ACCOUNT_ID="123456789012"
+# ... set other variables
+
+# Replace in all files
+find . -type f -name "*.yaml" -exec sed -i '' "s|<YOUR_CLUSTER_NAME>|${CLUSTER_NAME}|g" {} \;
+find . -type f -name "*.yaml" -exec sed -i '' "s|<YOUR_AWS_REGION>|${AWS_REGION}|g" {} \;
+find . -type f -name "*.yaml" -exec sed -i '' "s|<YOUR_AWS_ACCOUNT_ID>|${AWS_ACCOUNT_ID}|g" {} \;
+```

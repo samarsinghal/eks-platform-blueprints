@@ -1,0 +1,20 @@
+apiVersion: platform.company.com/v1alpha1
+kind: TeamNamespace
+metadata:
+  name: ml-team
+spec:
+  teamName: ml-team
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  environment: production
+  rbacProfile: admin
+  adminUsers: "<ADMIN_USER_EMAIL>"
+  developerUsers: "<DEV_USER_1_EMAIL>,<DEV_USER_2_EMAIL>"
+  cpuQuota: "50"
+  memoryQuota: "100Gi"
+  enableNetworkPolicies: true
+  enableSecretsAccess: true
+  secretsPrefix: "ml-team/"
+  enableAWSAccess: true
+  awsServices: "s3,dynamodb"

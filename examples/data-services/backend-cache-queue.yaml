@@ -1,0 +1,23 @@
+apiVersion: data.company.com/v1alpha1
+kind: TeamCache
+metadata:
+  name: backend-cache
+spec:
+  teamName: backend
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  engine: redis
+---
+apiVersion: data.company.com/v1alpha1
+kind: TeamQueue
+metadata:
+  name: backend-orders
+spec:
+  teamName: backend
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  queueName: orders
+  visibilityTimeout: "60"
+  enableEncryption: true

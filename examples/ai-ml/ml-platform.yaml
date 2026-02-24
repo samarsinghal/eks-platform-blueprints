@@ -1,0 +1,37 @@
+apiVersion: ai.company.com/v1alpha1
+kind: GPUNodePool
+metadata:
+  name: gpu-inference
+spec:
+  clusterName: <YOUR_CLUSTER_NAME>
+  nodePoolName: gpu-inference
+  acceleratorType: nvidia-gpu
+  capacityType: on-demand
+  cpuLimit: "100"
+  memoryLimit: "400Gi"
+---
+apiVersion: ai.company.com/v1alpha1
+kind: BedrockAccess
+metadata:
+  name: ml-team-bedrock
+spec:
+  teamName: ml-team
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  foundationModels: "*"
+  enableGuardrails: true
+  guardrailName: content-filter
+---
+apiVersion: ai.company.com/v1alpha1
+kind: BedrockKnowledgeBase
+metadata:
+  name: product-docs
+spec:
+  teamName: ml-team
+  clusterName: <YOUR_CLUSTER_NAME>
+  region: <YOUR_AWS_REGION>
+  accountID: "<YOUR_AWS_ACCOUNT_ID>"
+  knowledgeBaseName: product-docs
+  s3DataSource: "<YOUR_S3_BUCKET_URI>"  # e.g., s3://your-bucket-name/path/
+  embeddingModel: amazon.titan-embed-text-v2:0

@@ -1,0 +1,102 @@
+# Deploys KRO blueprint templates from the PUBLIC repo
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-blueprints
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  sources:
+    # RBAC (KRO controller + EKS capabilities permissions)
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>  # e.g., https://github.com/your-org/eks-platform-blueprints
+      targetRevision: main
+      path: kro-setup
+    # Modules (must be before platform foundation which depends on them)
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: modules/observability/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: modules/external-dns/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: modules/karpenter/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: modules/metrics-server/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: modules/external-secrets/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: modules/centralized-logging/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: modules/certificate-manager/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: modules/cost-visibility/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: modules/ingress-controller/kro-resourcegroups
+    # Platform tiers
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: platform/foundation/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: platform/security/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: team-services/team-namespace/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: team-services/ecr-repository/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: team-services/ingress/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: team-services/backup-strategy/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: data-services/database/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: data-services/cache/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: data-services/queue/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: data-services/storage/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: ai-ml/gpu-nodepool/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: ai-ml/bedrock-access/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: ai-ml/bedrock-agent/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: ai-ml/bedrock-knowledge-base/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: ai-ml/notebook/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: ai-ml/sagemaker-endpoint/kro-resourcegroups
+    - repoURL: <YOUR_BLUEPRINTS_REPO_URL>
+      targetRevision: main
+      path: ai-ml/training-job/kro-resourcegroups
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

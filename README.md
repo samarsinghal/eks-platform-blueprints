@@ -45,6 +45,21 @@ kubectl apply -f team-services/team-namespace/examples/backend-team.yaml
 
 ---
 
+## 📦 Private Config Repository
+
+For production use, we recommend a **two-repository pattern**:
+- **This repo** (public): Reusable blueprint templates
+- **Your private repo**: Actual configurations with your values
+
+**Get started**: Copy the [examples/](examples/) directory to create your private config repository. It includes:
+- Complete configuration examples with placeholders
+- ArgoCD setup for GitOps deployment
+- Comprehensive setup guide
+
+See [examples/README.md](examples/README.md) for detailed instructions.
+
+---
+
 ## Why This Approach?
 
 ### The Problem with Traditional Methods
@@ -250,10 +265,13 @@ eks-platform-blueprints/
 │   ├── deploy-blueprints.sh   # Deploy all templates
 │   └── health-check.sh        # Validate platform
 │
-├── argocd/                     # GitOps automation
-│   ├── root-app.yaml          # App of Apps
-│   ├── platform/              # Platform applications
-│   └── teams/                 # Team applications
+├── examples/                   # Complete private config starter kit
+│   ├── README.md              # Setup guide for private repo
+│   ├── argocd/                # GitOps setup (two-repo pattern)
+│   ├── platform/              # Platform configs with placeholders
+│   ├── teams/                 # Team namespace configs
+│   ├── data-services/         # Data service configs
+│   └── ai-ml/                 # AI/ML configs
 │
 └── README.md                   # This file
 ```
@@ -360,17 +378,30 @@ kubectl apply -f platform/security/examples/restricted.yaml
 kubectl apply -f team-services/team-namespace/examples/backend-team.yaml
 ```
 
-### Option 3: GitOps with ArgoCD
+### Option 3: GitOps with ArgoCD (Two-Repo Pattern)
+
+**Recommended for production**: Separate public templates from private configs.
 
 ```bash
-# Deploy root application (App of Apps pattern)
+# Step 1: Copy examples/ to your private config repository
+cp -r examples/ /path/to/your-private-repo/
+cd /path/to/your-private-repo/
+
+# Step 2: Replace placeholders with your actual values
+# See examples/README.md for detailed instructions
+
+# Step 3: Deploy blueprint templates from this public repo
+kubectl apply -f argocd/blueprints-app.yaml
+
+# Step 4: Deploy your configs from your private repo
 kubectl apply -f argocd/root-app.yaml
 
-# ArgoCD automatically deploys:
-# - Platform foundation
-# - Platform security
-# - Team namespaces
+# ArgoCD automatically syncs both repos:
+# - Templates from public eks-platform-blueprints
+# - Configs from your private repository
 ```
+
+See [examples/README.md](examples/README.md) for complete setup guide.
 
 ---
 
