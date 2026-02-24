@@ -15,7 +15,6 @@ spec:
       cpuLimit: string | default="100"
       memoryLimit: string | default="400Gi"
       gpuLimit: string | default="8"
-      nodeClassName: string | default="gpu"  # general, gpu, neuron
 
   resources:
     - id: gpuNodePool
@@ -43,7 +42,7 @@ spec:
               nodeClassRef:
                 group: eks.amazonaws.com
                 kind: NodeClass
-                name: ${schema.spec.nodeClassName}
+                name: default
               taints:
                 - key: nvidia.com/gpu
                   value: "true"
